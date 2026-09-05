@@ -3,7 +3,7 @@ package com.sems.payments.infrastructure.persistence.jpa.adapters;
 import com.sems.payments.domain.model.entities.*;
 import com.sems.payments.domain.repositories.PaymentRepositories.*;
 import com.sems.payments.infrastructure.persistence.jpa.entities.PaymentJpaEntities.*;
-import com.sems.payments.infrastructure.persistence.jpa.repositories.PaymentJpaRepositories.*;
+import com.sems.payments.infrastructure.persistence.jpa.repositories.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

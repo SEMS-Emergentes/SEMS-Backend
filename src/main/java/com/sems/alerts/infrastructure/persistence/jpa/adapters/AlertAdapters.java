@@ -3,7 +3,7 @@ package com.sems.alerts.infrastructure.persistence.jpa.adapters;
 import com.sems.alerts.domain.model.entities.*;
 import com.sems.alerts.domain.repositories.AlertRepositories.*;
 import com.sems.alerts.infrastructure.persistence.jpa.entities.AlertJpaEntities.*;
-import com.sems.alerts.infrastructure.persistence.jpa.repositories.AlertJpaRepositories.*;
+import com.sems.alerts.infrastructure.persistence.jpa.repositories.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

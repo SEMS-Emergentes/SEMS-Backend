@@ -6,7 +6,7 @@ import com.sems.analytics.domain.model.entities.*;
 import com.sems.analytics.domain.model.valueobjects.RankingItem;
 import com.sems.analytics.domain.repositories.AnalyticsRepositories.*;
 import com.sems.analytics.infrastructure.persistence.jpa.entities.AnalyticsJpaEntities.*;
-import com.sems.analytics.infrastructure.persistence.jpa.repositories.AnalyticsJpaRepositories.*;
+import com.sems.analytics.infrastructure.persistence.jpa.repositories.*;
 import com.sems.shared.errors.AppException;
 import java.util.List;
 import java.util.Optional;

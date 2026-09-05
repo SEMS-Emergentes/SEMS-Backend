@@ -3,7 +3,7 @@ package com.sems.subscriptions.infrastructure.persistence.jpa.adapters;
 import com.sems.subscriptions.domain.model.entities.*;
 import com.sems.subscriptions.domain.repositories.SubscriptionRepositories.*;
 import com.sems.subscriptions.infrastructure.persistence.jpa.entities.SubscriptionJpaEntities.*;
-import com.sems.subscriptions.infrastructure.persistence.jpa.repositories.SubscriptionJpaRepositories.*;
+import com.sems.subscriptions.infrastructure.persistence.jpa.repositories.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
