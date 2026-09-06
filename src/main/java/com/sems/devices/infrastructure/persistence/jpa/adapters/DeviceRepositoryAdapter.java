@@ -1,6 +1,7 @@
 package com.sems.devices.infrastructure.persistence.jpa.adapters;
 
 import com.sems.devices.domain.model.aggregates.Device;
+import com.sems.devices.domain.model.valueobjects.DeviceStatus;
 import com.sems.devices.domain.repositories.DeviceRepository;
 import com.sems.devices.infrastructure.persistence.jpa.repositories.DeviceJpaRepository;
 import java.util.List;
@@ -38,7 +39,8 @@ public class DeviceRepositoryAdapter implements DeviceRepository {
 
     @Override
     public List<Device> findByUserId(UUID userId) {
-        return jpa.findByUserId(userId).stream().map(DeviceMapper::toDomain).toList();
+        return jpa.findByUserIdAndStatusNot(userId, DeviceStatus.REMOVED)
+                  .stream().map(DeviceMapper::toDomain).toList();
     }
 
     @Override
