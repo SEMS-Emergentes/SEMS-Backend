@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.sems.analytics.domain.model.entities.*;
 import com.sems.analytics.domain.model.valueobjects.RankingItem;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.List;
 
@@ -74,21 +75,43 @@ public final class AnalyticsResources {
 
     // -------------------------------------------------------------- respuestas
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-    public record BillPredictionResponse(
-            String id, String userId, int predictionYear, int predictionMonth,
-            Instant periodStart, Instant periodEnd, double estimatedKwh, double estimatedAmount,
-            String currency, double tariffUsed, double errorMarginPercentage,
-            Instant generatedAt, Instant createdAt) {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record BillPredictionResponse(String id, String userId, int predictionYear,
+                                         int predictionMonth, Instant periodStart,
+                                         Instant periodEnd, double estimatedKwh,
+                                         double estimatedAmount, String currency, double tariffUsed,
+                                         double errorMarginPercentage, String siteId,
+                                         double estimatedKwhPeak, double estimatedKwhOffPeak,
+                                         double estimatedMaxDemandKw, double energyCost,
+                                         double powerCost, Instant generatedAt, Instant createdAt) {
 
         public static BillPredictionResponse from(BillPrediction p) {
             return new BillPredictionResponse(p.getId().toString(), p.getUserId(),
                     p.getPredictionYear(), p.getPredictionMonth(), p.getPeriodStart(),
                     p.getPeriodEnd(), p.getEstimatedKwh(), p.getEstimatedAmount(), p.getCurrency(),
-                    p.getTariffUsed(), p.getErrorMarginPercentage(), p.getGeneratedAt(),
-                    p.getCreatedAt());
+                    p.getTariffUsed(), p.getErrorMarginPercentage(), p.getSiteId(),
+                    p.getEstimatedKwhPeak(), p.getEstimatedKwhOffPeak(),
+                    p.getEstimatedMaxDemandKw(), p.getEnergyCost(), p.getPowerCost(),
+                    p.getGeneratedAt(), p.getCreatedAt());
         }
+    }
+
+    /** Peticion de proyeccion de recibo para un local. */
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record ForecastSiteBillRequest(
+            @NotBlank(message = "is required") String userId,
+            @NotBlank(message = "is required") String siteId,
+            @NotBlank(message = "is required") String tariffCategory,
+            @NotNull(message = "is required") Double contractedPowerKw,
+            int predictionYear,
+            int predictionMonth,
+            Instant periodStart,
+            Instant periodEnd,
+            double kwhPeak,
+            double kwhOffPeak,
+            double maxDemandKw,
+            double errorMarginPercentage) {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)

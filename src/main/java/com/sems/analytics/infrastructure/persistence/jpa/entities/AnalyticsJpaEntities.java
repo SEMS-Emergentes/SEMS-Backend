@@ -27,6 +27,14 @@ public final class AnalyticsJpaEntities {
         @Column(name = "currency", length = 10) private String currency;
         @Column(name = "tariff_used", nullable = false) private double tariffUsed;
         @Column(name = "error_margin_percentage", nullable = false) private double errorMarginPercentage;
+        // Desglose comercial: en un local, buena parte de la factura no viene
+        // del consumo sino del pico de demanda, y eso hay que poder ensenarlo.
+        @Column(name = "site_id", length = 80) private String siteId;
+        @Column(name = "estimated_kwh_peak") private double estimatedKwhPeak;
+        @Column(name = "estimated_kwh_off_peak") private double estimatedKwhOffPeak;
+        @Column(name = "estimated_max_demand_kw") private double estimatedMaxDemandKw;
+        @Column(name = "energy_cost") private double energyCost;
+        @Column(name = "power_cost") private double powerCost;
         @Column(name = "generated_at", nullable = false) private Instant generatedAt;
         @Column(name = "created_at", nullable = false) private Instant createdAt;
     }

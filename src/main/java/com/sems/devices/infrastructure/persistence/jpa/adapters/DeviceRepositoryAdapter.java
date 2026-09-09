@@ -44,6 +44,18 @@ public class DeviceRepositoryAdapter implements DeviceRepository {
     }
 
     @Override
+    public List<Device> findBySiteId(UUID siteId) {
+        return jpa.findBySiteIdAndStatusNot(siteId, DeviceStatus.REMOVED)
+                  .stream().map(DeviceMapper::toDomain).toList();
+    }
+
+    @Override
+    public List<Device> findByZoneId(UUID zoneId) {
+        return jpa.findByZoneIdAndStatusNot(zoneId, DeviceStatus.REMOVED)
+                  .stream().map(DeviceMapper::toDomain).toList();
+    }
+
+    @Override
     public boolean existsByExternalCode(String externalDeviceCode) {
         return jpa.existsByExternalDeviceCode(externalDeviceCode);
     }

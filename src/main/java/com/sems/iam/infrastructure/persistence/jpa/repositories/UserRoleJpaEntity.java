@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "user_roles")
+@Table(name = "iam_user_roles")
 @Getter
 @Setter
 @NoArgsConstructor

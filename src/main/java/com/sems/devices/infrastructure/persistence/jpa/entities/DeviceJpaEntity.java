@@ -17,6 +17,8 @@ import lombok.*;
 @Table(name = "dm_devices",
         indexes = {
                 @Index(name = "idx_dm_devices_user", columnList = "user_id"),
+                @Index(name = "idx_dm_devices_site", columnList = "site_id"),
+                @Index(name = "idx_dm_devices_zone", columnList = "zone_id"),
                 @Index(name = "idx_dm_devices_external", columnList = "external_device_code", unique = true)
         })
 @Getter
@@ -34,6 +36,12 @@ public class DeviceJpaEntity {
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;
+
+    @Column(name = "site_id", nullable = false)
+    private UUID siteId;
+
+    @Column(name = "zone_id")
+    private UUID zoneId;
 
     @Column(name = "device_name", nullable = false, length = 160)
     private String deviceName;

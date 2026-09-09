@@ -36,6 +36,16 @@ public class DeviceQueryService {
         return devices.findByUserId(userId);
     }
 
+    /** Dispositivos instalados en un local. */
+    public List<Device> devicesBySite(UUID siteId) {
+        return devices.findBySiteId(siteId);
+    }
+
+    /** Dispositivos de una zona concreta. */
+    public List<Device> devicesByZone(UUID zoneId) {
+        return devices.findByZoneId(zoneId);
+    }
+
     public List<DeviceBinding> bindingsByDevice(UUID deviceId) {
         return bindings.findByDeviceId(deviceId);
     }

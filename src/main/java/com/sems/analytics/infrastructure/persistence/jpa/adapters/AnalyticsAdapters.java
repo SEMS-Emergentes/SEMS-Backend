@@ -30,7 +30,10 @@ public final class AnalyticsAdapters {
             BillPredictionRow row = new BillPredictionRow(p.getId(), p.getUserId(),
                     p.getPredictionYear(), p.getPredictionMonth(), p.getPeriodStart(),
                     p.getPeriodEnd(), p.getEstimatedKwh(), p.getEstimatedAmount(), p.getCurrency(),
-                    p.getTariffUsed(), p.getErrorMarginPercentage(), p.getGeneratedAt(), p.getCreatedAt());
+                    p.getTariffUsed(), p.getErrorMarginPercentage(), p.getSiteId(),
+                    p.getEstimatedKwhPeak(), p.getEstimatedKwhOffPeak(),
+                    p.getEstimatedMaxDemandKw(), p.getEnergyCost(), p.getPowerCost(),
+                    p.getGeneratedAt(), p.getCreatedAt());
             return toDomain(jpa.save(row));
         }
 
@@ -44,8 +47,10 @@ public final class AnalyticsAdapters {
             return new BillPrediction(r.getId(), r.getUserId(), r.getPredictionYear(),
                     r.getPredictionMonth(), r.getPeriodStart(), r.getPeriodEnd(),
                     r.getEstimatedKwh(), r.getEstimatedAmount(), r.getCurrency(),
-                    r.getTariffUsed(), r.getErrorMarginPercentage(), r.getGeneratedAt(),
-                    r.getCreatedAt());
+                    r.getTariffUsed(), r.getErrorMarginPercentage(), r.getSiteId(),
+                    r.getEstimatedKwhPeak(), r.getEstimatedKwhOffPeak(),
+                    r.getEstimatedMaxDemandKw(), r.getEnergyCost(), r.getPowerCost(),
+                    r.getGeneratedAt(), r.getCreatedAt());
         }
     }
 

@@ -19,13 +19,36 @@ public class BillPrediction {
     private final String currency;
     private final double tariffUsed;
     private final double errorMarginPercentage;
+
+    // --- desglose comercial ---
+    //
+    // La prediccion del segmento anterior era un numero: kWh por precio. Para un
+    // local eso se queda corto, porque una parte grande de la factura no depende
+    // de la energia sino del pico de demanda. Guardar el desglose es lo que
+    // permite ensenar de donde sale el importe y sobre que se puede actuar.
+
+    /** Local al que corresponde la prediccion. Vacio en las heredadas. */
+    private final String siteId;
+
+    private final double estimatedKwhPeak;
+    private final double estimatedKwhOffPeak;
+
+    /** Demanda maxima prevista, en kW. Es la que fija el cargo por potencia. */
+    private final double estimatedMaxDemandKw;
+
+    private final double energyCost;
+    private final double powerCost;
+
     private final Instant generatedAt;
     private final Instant createdAt;
 
     public BillPrediction(UUID id, String userId, int predictionYear, int predictionMonth,
                           Instant periodStart, Instant periodEnd, double estimatedKwh,
                           double estimatedAmount, String currency, double tariffUsed,
-                          double errorMarginPercentage, Instant generatedAt, Instant createdAt) {
+                          double errorMarginPercentage, String siteId, double estimatedKwhPeak,
+                          double estimatedKwhOffPeak, double estimatedMaxDemandKw,
+                          double energyCost, double powerCost, Instant generatedAt,
+                          Instant createdAt) {
         this.id = id;
         this.userId = userId;
         this.predictionYear = predictionYear;
@@ -37,6 +60,12 @@ public class BillPrediction {
         this.currency = currency;
         this.tariffUsed = tariffUsed;
         this.errorMarginPercentage = errorMarginPercentage;
+        this.siteId = siteId;
+        this.estimatedKwhPeak = estimatedKwhPeak;
+        this.estimatedKwhOffPeak = estimatedKwhOffPeak;
+        this.estimatedMaxDemandKw = estimatedMaxDemandKw;
+        this.energyCost = energyCost;
+        this.powerCost = powerCost;
         this.generatedAt = generatedAt;
         this.createdAt = createdAt;
     }
@@ -44,9 +73,21 @@ public class BillPrediction {
     public static BillPrediction create(String userId, int year, int month, Instant periodStart,
                                         Instant periodEnd, double estimatedKwh, double estimatedAmount,
                                         String currency, double tariffUsed, double errorMargin) {
+        return create(userId, year, month, periodStart, periodEnd, estimatedKwh, estimatedAmount,
+                currency, tariffUsed, errorMargin, null, 0, 0, 0, 0, 0);
+    }
+
+    /** Version con el desglose comercial completo. */
+    public static BillPrediction create(String userId, int year, int month, Instant periodStart,
+                                        Instant periodEnd, double estimatedKwh,
+                                        double estimatedAmount, String currency, double tariffUsed,
+                                        double errorMargin, String siteId, double kwhPeak,
+                                        double kwhOffPeak, double maxDemandKw, double energyCost,
+                                        double powerCost) {
         Instant now = Instant.now();
         return new BillPrediction(UUID.randomUUID(), userId, year, month, periodStart, periodEnd,
                 estimatedKwh, estimatedAmount, currency == null ? "PEN" : currency,
-                tariffUsed, errorMargin, now, now);
+                tariffUsed, errorMargin, siteId, kwhPeak, kwhOffPeak, maxDemandKw, energyCost,
+                powerCost, now, now);
     }
 }

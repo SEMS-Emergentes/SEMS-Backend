@@ -2,6 +2,7 @@ package com.sems.analytics.application;
 
 import com.sems.analytics.domain.model.entities.*;
 import com.sems.analytics.domain.model.valueobjects.RankingItem;
+import com.sems.analytics.domain.services.BillCalculator;
 import com.sems.analytics.domain.repositories.AnalyticsRepositories.*;
 import com.sems.shared.errors.AppException;
 import java.time.Instant;
@@ -27,6 +28,7 @@ public class AnalyticsService {
     private final AnomalyRepository anomalies;
     private final DeviceIdentificationRepository identifications;
     private final ConsumptionRankingRepository rankings;
+    private final BillCalculator calculator;
 
     // ------------------------------------------------------ proyeccion de recibo
 
@@ -37,6 +39,29 @@ public class AnalyticsService {
                                            double tariffUsed, double errorMargin) {
         return predictions.save(BillPrediction.create(userId, year, month, periodStart, periodEnd,
                 estimatedKwh, estimatedAmount, currency, tariffUsed, errorMargin));
+    }
+
+    /**
+     * Calcula y guarda la proyeccion de recibo de un local con la tarifa
+     * comercial vigente.
+     *
+     * <p>A diferencia de {@code createPrediction}, aqui el importe no lo trae
+     * quien llama: se calcula. Es lo que permite que la proyeccion refleje el
+     * cargo por potencia, que en un local puede ser la mitad de la factura y con
+     * la tarifa plana anterior no aparecia por ningun lado.
+     */
+    public BillPrediction forecastSiteBill(String userId, String siteId, String tariffCategory,
+                                           double contractedPowerKw, int year, int month,
+                                           Instant periodStart, Instant periodEnd, double kwhPeak,
+                                           double kwhOffPeak, double maxDemandKw,
+                                           double errorMargin) {
+        BillCalculator.EstimatedBill estimado = calculator.estimate(tariffCategory, kwhPeak,
+                kwhOffPeak, maxDemandKw, contractedPowerKw);
+
+        return predictions.save(BillPrediction.create(userId, year, month, periodStart, periodEnd,
+                kwhPeak + kwhOffPeak, estimado.total(), estimado.currency(), estimado.tariffUsed(),
+                errorMargin, siteId, kwhPeak, kwhOffPeak, maxDemandKw, estimado.energyCost(),
+                estimado.powerCost()));
     }
 
     @Transactional(readOnly = true)

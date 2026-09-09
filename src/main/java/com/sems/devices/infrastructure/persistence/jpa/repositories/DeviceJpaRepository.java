@@ -27,4 +27,10 @@ public interface DeviceJpaRepository extends JpaRepository<DeviceJpaEntity, UUID
      * sin poder anadir ninguno mas, para siempre.</p>
      */
     List<DeviceJpaEntity> findByUserIdAndStatusNot(UUID userId, DeviceStatus status);
+
+    /** Dispositivos vigentes instalados en un local. */
+    List<DeviceJpaEntity> findBySiteIdAndStatusNot(UUID siteId, DeviceStatus status);
+
+    /** Dispositivos vigentes de una zona concreta. */
+    List<DeviceJpaEntity> findByZoneIdAndStatusNot(UUID zoneId, DeviceStatus status);
 }

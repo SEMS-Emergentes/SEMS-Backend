@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /** Ajustes con nombre asociados a un dispositivo. */
-@Tag(name = "Device Configurations", description = "Ajustes de cada dispositivo")
+@Tag(name = "Device Configurations", description = "Per-device settings")
 @RestController
 @RequestMapping("/api/v1/device-management")
 @RequiredArgsConstructor
@@ -23,7 +23,7 @@ public class DeviceConfigurationController {
     private final DeviceCommandService commands;
     private final DeviceQueryService queries;
 
-    @Operation(summary = "Crea o actualiza un ajuste del dispositivo")
+    @Operation(summary = "Creates or updates a device setting")
     @PostMapping("/devices/{deviceId}/configurations")
     public ResponseEntity<DeviceConfigurationResource> upsert(
             @PathVariable UUID deviceId,
@@ -33,14 +33,14 @@ public class DeviceConfigurationController {
                 .body(DeviceConfigurationResource.from(configuration));
     }
 
-    @Operation(summary = "Lista los ajustes de un dispositivo")
+    @Operation(summary = "Lists the settings of a device")
     @GetMapping("/devices/{deviceId}/configurations")
     public List<DeviceConfigurationResource> byDevice(@PathVariable UUID deviceId) {
         return queries.configurationsByDevice(deviceId).stream()
                 .map(DeviceConfigurationResource::from).toList();
     }
 
-    @Operation(summary = "Actualiza el valor de un ajuste")
+    @Operation(summary = "Updates the value of a setting")
     @PutMapping("/configurations/{configurationId}")
     public DeviceConfigurationResource update(@PathVariable UUID configurationId,
                                               @RequestBody UpdateConfigurationRequest request) {

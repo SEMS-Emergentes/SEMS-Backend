@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 /** Comprobantes emitidos por cada cobro completado. */
-@Tag(name = "Invoices", description = "Comprobantes de pago")
+@Tag(name = "Invoices", description = "Payment receipts")
 @RestController
 @RequestMapping("/api/v1/invoices")
 @RequiredArgsConstructor
@@ -17,13 +17,13 @@ public class InvoiceController {
 
     private final PaymentQueryService queries;
 
-    @Operation(summary = "Obtiene un comprobante por su identificador")
+    @Operation(summary = "Gets an invoice by its identifier")
     @GetMapping("/{invoiceId}")
     public InvoiceResponse byId(@PathVariable UUID invoiceId) {
         return InvoiceResponse.from(queries.invoiceById(invoiceId));
     }
 
-    @Operation(summary = "Comprobante asociado a un pago")
+    @Operation(summary = "Invoice associated with a payment")
     @GetMapping("/payment/{paymentId}")
     public InvoiceResponse byPayment(@PathVariable UUID paymentId) {
         return InvoiceResponse.from(queries.invoiceByPayment(paymentId));

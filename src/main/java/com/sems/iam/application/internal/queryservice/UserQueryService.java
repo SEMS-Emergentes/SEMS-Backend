@@ -6,6 +6,7 @@ import com.sems.iam.interfaces.rest.resources.UserResource;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * UserQueryService is the "query" side (read-only) of the CQRS split: commands
@@ -15,6 +16,13 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @RequiredArgsConstructor
+// Sin transaccion abierta, la relacion perezosa hacia el rol no se puede
+// cargar: spring.jpa.open-in-view esta en false, de modo que la sesion de
+// Hibernate ya esta cerrada cuando el controlador serializa la respuesta y
+// toResource() falla con LazyInitializationException, que el manejador global
+// traduce a un 500 sin pista de la causa. readOnly = true porque estas
+// consultas no escriben.
+@Transactional(readOnly = true)
 public class UserQueryService {
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;

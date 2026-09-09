@@ -45,27 +45,45 @@ public class PlanSeeder implements ApplicationRunner {
         }
         log.info("No hay planes registrados; cargando los tres por defecto");
 
+        // Los planes se miden en LOCALES, no en dispositivos.
+        //
+        // En el segmento anterior el limite de dispositivos tenia sentido: una
+        // vivienda tiene unos pocos. Un supermercado tiene decenas de medidores
+        // en un solo local, asi que un tope de tres o diez no separa a un
+        // cliente pequeno de una cadena; solo estorba. Lo que de verdad escala
+        // con el tamano del cliente es cuantos locales gestiona.
         plans.save(withFeatures(
-                SubscriptionPlan.create("Free", "Start monitoring at no cost", 0, "PEN", "monthly"),
+                SubscriptionPlan.create("Starter",
+                        "One site, with the essentials to start measuring", 0, "PEN", "monthly"),
                 stripePriceFree,
-                feature("BASIC_DASHBOARD", "Basic energy dashboard", "enabled"),
-                feature("CONSUMPTION_ALERTS", "Essential consumption alerts", "enabled"),
-                feature("LINKED_DEVICES_LIMIT", "Linked devices limit", "3")));
+                feature("BASIC_DASHBOARD", "Site consumption dashboard", "enabled"),
+                feature("CONSUMPTION_ALERTS", "Consumption alerts", "enabled"),
+                feature("SITES_LIMIT", "Sites included", "1"),
+                feature("DEVICES_PER_SITE_LIMIT", "Meters per site", "10")));
 
         plans.save(withFeatures(
-                SubscriptionPlan.create("Plus", "For active homes", 15, "PEN", "monthly"),
+                SubscriptionPlan.create("Business",
+                        "For small chains, with demand control", 149, "PEN", "monthly"),
                 stripePricePlus,
-                feature("FREE_INCLUDED", "Everything in Free", "enabled"),
-                feature("DEVICE_ANALYTICS", "Detailed device analytics", "enabled"),
-                feature("SAVING_RECOMMENDATIONS", "Personalized saving recommendations", "enabled"),
-                feature("MONTHLY_REPORTS", "Monthly savings reports", "enabled"),
-                feature("LINKED_DEVICES_LIMIT", "Linked devices limit", "10")));
+                feature("BASIC_INCLUDED", "Everything in Starter", "enabled"),
+                feature("SITES_LIMIT", "Sites included", "5"),
+                feature("DEVICES_PER_SITE_LIMIT", "Meters per site", "50"),
+                feature("ZONE_ANALYTICS", "Consumption broken down by zone", "enabled"),
+                // El aviso de demanda es lo que justifica el salto de plan:
+                // evitar un solo pico al mes ya paga la diferencia.
+                feature("DEMAND_ALERTS",
+                        "Demand warning before exceeding the contracted power", "enabled"),
+                feature("PEAK_HOUR_REPORTS", "Peak-hour consumption reports", "enabled")));
 
         plans.save(withFeatures(
-                SubscriptionPlan.create("Pro", "Advanced control and insights", 25, "PEN", "monthly"),
+                SubscriptionPlan.create("Enterprise",
+                        "Large chains, with site-to-site benchmarking", 399, "PEN", "monthly"),
                 stripePricePro,
-                feature("PLUS_INCLUDED", "Everything in Plus", "enabled"),
-                feature("UNLIMITED_DEVICES", "Unlimited linked devices", "enabled"),
+                feature("BUSINESS_INCLUDED", "Everything in Business", "enabled"),
+                feature("SITES_LIMIT", "Sites included", "unlimited"),
+                feature("DEVICES_PER_SITE_LIMIT", "Meters per site", "unlimited"),
+                feature("SITE_BENCHMARKING", "Performance benchmarking across sites", "enabled"),
+                feature("TARIFF_OPTIMIZATION", "Tariff category analysis", "enabled"),
                 feature("PRIORITY_SUPPORT", "Priority support", "enabled")));
     }
 

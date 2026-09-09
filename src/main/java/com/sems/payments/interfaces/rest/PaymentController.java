@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /** Cobros y sesiones de pago. */
-@Tag(name = "Payments", description = "Cobros, comprobantes y sesiones de Stripe Checkout")
+@Tag(name = "Payments", description = "Charges, receipts and Stripe Checkout sessions")
 @RestController
 @RequestMapping("/api/v1/payments")
 @RequiredArgsConstructor
@@ -23,7 +23,7 @@ public class PaymentController {
     private final PaymentCommandService commands;
     private final PaymentQueryService queries;
 
-    @Operation(summary = "Cobra con una tarjeta guardada")
+    @Operation(summary = "Charges a saved card")
     @PostMapping("/process")
     public ResponseEntity<ProcessPaymentResponse> process(
             @Valid @RequestBody ProcessPaymentRequest request) {
@@ -41,7 +41,7 @@ public class PaymentController {
      * <p>Devuelve la URL a la que la aplicacion web debe redirigir. Los datos de
      * la tarjeta se introducen en la pagina de Stripe, nunca en SEMS.
      */
-    @Operation(summary = "Crea una sesion de Stripe Checkout")
+    @Operation(summary = "Creates a Stripe Checkout session")
     @PostMapping("/checkout-session")
     public CheckoutSessionResponse createCheckoutSession(
             @Valid @RequestBody CreateCheckoutRequest request) {
@@ -54,20 +54,20 @@ public class PaymentController {
         return new CheckoutSessionResponse(session.sessionId(), session.url());
     }
 
-    @Operation(summary = "Pagos de un usuario")
+    @Operation(summary = "A user's payments")
     @GetMapping("/user/{userId}")
     public List<PaymentResponse> byUser(@PathVariable UUID userId) {
         return queries.paymentsByUser(userId).stream().map(PaymentResponse::from).toList();
     }
 
-    @Operation(summary = "Pagos de una suscripcion")
+    @Operation(summary = "Payments of a subscription")
     @GetMapping("/subscription/{subscriptionId}")
     public List<PaymentResponse> bySubscription(@PathVariable UUID subscriptionId) {
         return queries.paymentsBySubscription(subscriptionId).stream()
                 .map(PaymentResponse::from).toList();
     }
 
-    @Operation(summary = "Obtiene un pago por su identificador")
+    @Operation(summary = "Gets a payment by its identifier")
     @GetMapping("/{paymentId}")
     public PaymentResponse byId(@PathVariable UUID paymentId) {
         return PaymentResponse.from(queries.paymentById(paymentId));

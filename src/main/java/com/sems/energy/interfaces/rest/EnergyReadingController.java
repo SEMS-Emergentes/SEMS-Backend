@@ -15,7 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /** Lecturas individuales enviadas por los medidores. */
-@Tag(name = "Energy Readings", description = "Historial de mediciones electricas")
+@Tag(name = "Energy Readings", description = "History of electrical measurements")
 @RestController
 @RequestMapping("/api/v1/energy-readings")
 @RequiredArgsConstructor
@@ -24,7 +24,7 @@ public class EnergyReadingController {
     private final EnergyCommandService commands;
     private final EnergyQueryService queries;
 
-    @Operation(summary = "Registra una lectura nueva")
+    @Operation(summary = "Records a new reading")
     @PostMapping
     public ResponseEntity<ReadingResponse> create(@Valid @RequestBody CreateReadingRequest request) {
         var reading = commands.recordReading(request.userId(), request.meterId(), request.deviceId(),
@@ -33,14 +33,14 @@ public class EnergyReadingController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ReadingResponse.from(reading));
     }
 
-    @Operation(summary = "Lecturas de un usuario, de la mas reciente a la mas antigua")
+    @Operation(summary = "A user's readings, newest first")
     @GetMapping("/user/{userId}")
     public List<ReadingResponse> byUser(@PathVariable String userId,
                                         @RequestParam(defaultValue = "100") int limit) {
         return queries.readingsByUser(userId, limit).stream().map(ReadingResponse::from).toList();
     }
 
-    @Operation(summary = "Lecturas de un dispositivo")
+    @Operation(summary = "Readings from a device")
     @GetMapping("/device/{deviceId}")
     public List<ReadingResponse> byDevice(@PathVariable String deviceId,
                                           @RequestParam(defaultValue = "50") int limit,
@@ -49,7 +49,7 @@ public class EnergyReadingController {
                 .map(ReadingResponse::from).toList();
     }
 
-    @Operation(summary = "Lecturas de un usuario dentro de un rango de fechas")
+    @Operation(summary = "A user's readings within a date range")
     @GetMapping("/range")
     public List<ReadingResponse> byRange(@RequestParam String userId,
                                          @RequestParam Instant from,
@@ -57,13 +57,13 @@ public class EnergyReadingController {
         return queries.readingsByRange(userId, from, to).stream().map(ReadingResponse::from).toList();
     }
 
-    @Operation(summary = "Ultima lectura de un medidor")
+    @Operation(summary = "Latest reading from a meter")
     @GetMapping("/meter/{meterId}/latest")
     public ReadingResponse latestByMeter(@PathVariable String meterId) {
         return ReadingResponse.from(queries.latestByMeter(meterId));
     }
 
-    @Operation(summary = "Obtiene una lectura por su identificador")
+    @Operation(summary = "Gets a reading by its identifier")
     @GetMapping("/{readingId}")
     public ReadingResponse byId(@PathVariable UUID readingId) {
         return ReadingResponse.from(queries.readingById(readingId));

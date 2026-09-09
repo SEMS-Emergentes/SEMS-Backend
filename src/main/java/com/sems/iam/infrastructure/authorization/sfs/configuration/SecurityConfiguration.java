@@ -8,6 +8,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -40,6 +42,15 @@ public class SecurityConfiguration {
                 // (OPTIONS) de CUALQUIER origen, incluido localhost. Desde el
                 // navegador parece que el backend esta caido, pero responde
                 // perfectamente a curl: curl no manda esa comprobacion previa.
+                // Sin punto de entrada propio, Spring Security responde 403 a una
+                // peticion que llega sin credenciales. Eso confunde dos casos
+                // distintos: "no has iniciado sesion" y "no tienes permiso". El
+                // cliente necesita distinguirlos para saber si debe renovar el
+                // token o mostrar un aviso, y el backend en C# ya devuelve 401
+                // en ese caso. HttpStatusEntryPoint deja el 401 sin cuerpo,
+                // igual que aquel.
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(
+                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())

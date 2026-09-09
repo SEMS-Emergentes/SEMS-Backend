@@ -20,28 +20,28 @@ public final class DeviceMapper {
     public static DeviceJpaEntity toEntity(Device device) {
         return new DeviceJpaEntity(
                 device.getDeviceId(), device.getExternalDeviceCode(), device.getUserId(),
-                device.getDeviceName(), device.getDeviceType(), device.getBrand(), device.getModel(),
+                device.getSiteId(), device.getZoneId(), device.getDeviceName(), device.getDeviceType(), device.getBrand(), device.getModel(),
                 device.getConnectionProtocol(), device.getStatus(),
                 device.getRegisteredAt(), device.getUpdatedAt());
     }
 
     public static Device toDomain(DeviceJpaEntity row) {
         return Device.rehydrate(row.getDeviceId(), row.getExternalDeviceCode(), row.getUserId(),
-                row.getDeviceName(), row.getDeviceType(), row.getBrand(), row.getModel(),
+                row.getSiteId(), row.getZoneId(), row.getDeviceName(), row.getDeviceType(), row.getBrand(), row.getModel(),
                 row.getConnectionProtocol(), row.getStatus(),
                 row.getRegisteredAt(), row.getUpdatedAt());
     }
 
     public static DeviceBindingJpaEntity toEntity(DeviceBinding binding) {
         return new DeviceBindingJpaEntity(
-                binding.getBindingId(), binding.getDeviceId(), binding.getUserId(), binding.getHomeId(),
+                binding.getBindingId(), binding.getDeviceId(), binding.getUserId(), binding.getSiteId(),
                 binding.getBindingStatus(), binding.getLinkedAt(),
                 binding.getUnlinkedAt(), binding.getUpdatedAt());
     }
 
     public static DeviceBinding toDomain(DeviceBindingJpaEntity row) {
         return DeviceBinding.rehydrate(row.getBindingId(), row.getDeviceId(), row.getUserId(),
-                row.getHomeId(), row.getBindingStatus(), row.getLinkedAt(),
+                row.getSiteId(), row.getBindingStatus(), row.getLinkedAt(),
                 row.getUnlinkedAt(), row.getUpdatedAt());
     }
 

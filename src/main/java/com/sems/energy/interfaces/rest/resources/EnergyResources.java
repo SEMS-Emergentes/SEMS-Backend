@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.sems.energy.domain.model.entities.*;
 import com.sems.energy.domain.model.valueobjects.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
@@ -120,6 +122,51 @@ public final class EnergyResources {
         public static PricingResponse from(EnergyPrice price) {
             return new PricingResponse(price.provider(), price.pricePerKwh(),
                     price.currency(), price.timestamp());
+        }
+    }
+
+    /** Tarifa comercial: precios por franja y cargos por potencia. */
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record TariffResponse(String provider, String tariffCategory, String currency,
+                                 BigDecimal energyPeakPerKwh, BigDecimal energyOffPeakPerKwh,
+                                 BigDecimal powerPerKwMonth, BigDecimal excessPowerPerKwMonth,
+                                 BigDecimal fixedCharge, BigDecimal igv, String peakHours,
+                                 boolean inPeakNow, Instant timestamp) {
+
+        public static TariffResponse from(CommercialTariff t) {
+            return new TariffResponse(t.provider(), t.tariffCategory(), t.currency(),
+                    t.energiaPuntaPorKwh(), t.energiaFueraDePuntaPorKwh(), t.potenciaPorKwMes(),
+                    t.excesoDePotenciaPorKwMes(), t.cargoFijoMensual(), t.igv(),
+                    String.format("%02d:00-%02d:00 lun-sab", HorarioPunta.HORA_INICIO,
+                            HorarioPunta.HORA_FIN),
+                    HorarioPunta.esHoraPunta(Instant.now()), t.timestamp());
+        }
+    }
+
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record EstimateBillRequest(
+            @NotBlank(message = "is required") String tariffCategory,
+            @NotNull(message = "is required") BigDecimal contractedPowerKw,
+            BigDecimal kwhPeak,
+            BigDecimal kwhOffPeak,
+            BigDecimal maxDemandKw) {
+    }
+
+    /** Desglose de la factura estimada de un local. */
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record BillEstimateResponse(BigDecimal kwhPeak, BigDecimal kwhOffPeak,
+                                       BigDecimal maxDemandKw, BigDecimal contractedPowerKw,
+                                       BigDecimal excessPowerKw, boolean hasPowerExcess,
+                                       BigDecimal energyCost, BigDecimal powerCost,
+                                       BigDecimal powerSharePct, BigDecimal fixedCharge,
+                                       BigDecimal subtotal, BigDecimal igv, BigDecimal total,
+                                       String currency) {
+
+        public static BillEstimateResponse from(BillBreakdown b) {
+            return new BillEstimateResponse(b.kwhPunta(), b.kwhFueraDePunta(), b.demandaMaximaKw(),
+                    b.potenciaContratadaKw(), b.excesoDePotenciaKw(), b.hayExcesoDePotencia(),
+                    b.costoEnergia(), b.costoPotencia(), b.pesoDeLaPotencia(), b.cargoFijo(),
+                    b.subtotal(), b.igv(), b.total(), b.currency());
         }
     }
 }

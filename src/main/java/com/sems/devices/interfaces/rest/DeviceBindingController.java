@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /** Vinculacion de dispositivos con usuarios y hogares. */
-@Tag(name = "Device Bindings", description = "Vinculacion y desvinculacion de dispositivos")
+@Tag(name = "Device Bindings", description = "Linking and unlinking of devices")
 @RestController
 @RequestMapping("/api/v1/device-management")
 @RequiredArgsConstructor
@@ -23,29 +23,29 @@ public class DeviceBindingController {
     private final DeviceCommandService commands;
     private final DeviceQueryService queries;
 
-    @Operation(summary = "Vincula un dispositivo a un usuario")
+    @Operation(summary = "Links a device to a user")
     @PostMapping("/devices/{deviceId}/bindings")
     public ResponseEntity<DeviceBindingResource> bind(@PathVariable UUID deviceId,
                                                       @Valid @RequestBody CreateBindingRequest request) {
         var binding = commands.bind(deviceId, UUID.fromString(request.userId()),
-                request.homeId() == null || request.homeId().isBlank()
-                        ? null : UUID.fromString(request.homeId()));
+                request.siteId() == null || request.siteId().isBlank()
+                        ? null : UUID.fromString(request.siteId()));
         return ResponseEntity.status(HttpStatus.CREATED).body(DeviceBindingResource.from(binding));
     }
 
-    @Operation(summary = "Lista los vinculos de un dispositivo")
+    @Operation(summary = "Lists the bindings of a device")
     @GetMapping("/devices/{deviceId}/bindings")
     public List<DeviceBindingResource> byDevice(@PathVariable UUID deviceId) {
         return queries.bindingsByDevice(deviceId).stream().map(DeviceBindingResource::from).toList();
     }
 
-    @Operation(summary = "Lista los vinculos de un usuario")
+    @Operation(summary = "Lists the bindings of a user")
     @GetMapping("/users/{userId}/bindings")
     public List<DeviceBindingResource> byUser(@PathVariable UUID userId) {
         return queries.bindingsByUser(userId).stream().map(DeviceBindingResource::from).toList();
     }
 
-    @Operation(summary = "Desvincula un dispositivo")
+    @Operation(summary = "Unlinks a device")
     @PatchMapping("/bindings/{bindingId}/unlink")
     public DeviceBindingResource unlink(@PathVariable UUID bindingId) {
         return DeviceBindingResource.from(commands.unbind(bindingId));

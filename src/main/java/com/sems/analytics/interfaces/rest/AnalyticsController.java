@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
  * {@code /api/v1/analytics}. El frontend consume sobre todo
  * {@code /bill-predictions/user/{id}} y {@code /consumption-rankings/user/{id}}.
  */
-@Tag(name = "Analytics", description = "Proyecciones, recomendaciones, anomalias y rankings")
+@Tag(name = "Analytics", description = "Forecasts, recommendations, anomalies and rankings")
 @RestController
 @RequestMapping("/api/v1/analytics")
 @RequiredArgsConstructor
@@ -29,13 +29,13 @@ public class AnalyticsController {
 
     // -------------------------------------------------------- bill-predictions
 
-    @Operation(summary = "Proyecciones de recibo de un usuario")
+    @Operation(summary = "A user's bill forecasts")
     @GetMapping("/bill-predictions/user/{userId}")
     public List<BillPredictionResponse> predictions(@PathVariable String userId) {
         return service.predictionsByUser(userId).stream().map(BillPredictionResponse::from).toList();
     }
 
-    @Operation(summary = "Registra una proyeccion de recibo")
+    @Operation(summary = "Records a bill forecast")
     @PostMapping("/bill-predictions")
     public ResponseEntity<BillPredictionResponse> createPrediction(
             @Valid @RequestBody CreatePredictionRequest r) {
@@ -45,16 +45,27 @@ public class AnalyticsController {
         return ResponseEntity.status(HttpStatus.CREATED).body(BillPredictionResponse.from(created));
     }
 
+    @Operation(summary = "Forecasts a site's bill using the commercial tariff")
+    @PostMapping("/bill-predictions/forecast")
+    public ResponseEntity<BillPredictionResponse> forecastSiteBill(
+            @Valid @RequestBody ForecastSiteBillRequest r) {
+        var created = service.forecastSiteBill(r.userId(), r.siteId(), r.tariffCategory(),
+                r.contractedPowerKw(), r.predictionYear(), r.predictionMonth(), r.periodStart(),
+                r.periodEnd(), r.kwhPeak(), r.kwhOffPeak(), r.maxDemandKw(),
+                r.errorMarginPercentage());
+        return ResponseEntity.status(HttpStatus.CREATED).body(BillPredictionResponse.from(created));
+    }
+
     // ---------------------------------------------------------- recommendations
 
-    @Operation(summary = "Recomendaciones de ahorro de un usuario")
+    @Operation(summary = "A user's saving recommendations")
     @GetMapping("/recommendations/user/{userId}")
     public List<RecommendationResponse> recommendations(@PathVariable String userId) {
         return service.recommendationsByUser(userId).stream()
                 .map(RecommendationResponse::from).toList();
     }
 
-    @Operation(summary = "Registra una recomendacion")
+    @Operation(summary = "Records a recommendation")
     @PostMapping("/recommendations")
     public ResponseEntity<RecommendationResponse> createRecommendation(
             @Valid @RequestBody CreateRecommendationRequest r) {
@@ -64,7 +75,7 @@ public class AnalyticsController {
         return ResponseEntity.status(HttpStatus.CREATED).body(RecommendationResponse.from(created));
     }
 
-    @Operation(summary = "Marca una recomendacion como aplicada")
+    @Operation(summary = "Marks a recommendation as applied")
     @PatchMapping("/recommendations/{recommendationId}/apply")
     public RecommendationResponse applyRecommendation(@PathVariable UUID recommendationId) {
         return RecommendationResponse.from(service.applyRecommendation(recommendationId));
@@ -72,13 +83,13 @@ public class AnalyticsController {
 
     // ---------------------------------------------------------------- anomalies
 
-    @Operation(summary = "Anomalias detectadas para un usuario")
+    @Operation(summary = "Anomalies detected for a user")
     @GetMapping("/anomalies/user/{userId}")
     public List<AnomalyResponse> anomalies(@PathVariable String userId) {
         return service.anomaliesByUser(userId).stream().map(AnomalyResponse::from).toList();
     }
 
-    @Operation(summary = "Registra una anomalia")
+    @Operation(summary = "Records an anomaly")
     @PostMapping("/anomalies")
     public ResponseEntity<AnomalyResponse> createAnomaly(@Valid @RequestBody CreateAnomalyRequest r) {
         var created = service.createAnomaly(r.userId(), r.deviceId(), r.anomalyType(),
@@ -86,7 +97,7 @@ public class AnalyticsController {
         return ResponseEntity.status(HttpStatus.CREATED).body(AnomalyResponse.from(created));
     }
 
-    @Operation(summary = "Da por resuelta una anomalia")
+    @Operation(summary = "Marks an anomaly as resolved")
     @PatchMapping("/anomalies/{anomalyId}/resolve")
     public AnomalyResponse resolveAnomaly(@PathVariable UUID anomalyId) {
         return AnomalyResponse.from(service.resolveAnomaly(anomalyId));
@@ -94,14 +105,14 @@ public class AnalyticsController {
 
     // ------------------------------------------------------ device-identifications
 
-    @Operation(summary = "Identificaciones de aparatos de un usuario")
+    @Operation(summary = "Appliance identifications for a user")
     @GetMapping("/device-identifications/user/{userId}")
     public List<DeviceIdentificationResponse> identifications(@PathVariable String userId) {
         return service.identificationsByUser(userId).stream()
                 .map(DeviceIdentificationResponse::from).toList();
     }
 
-    @Operation(summary = "Registra una identificacion de aparato")
+    @Operation(summary = "Records an appliance identification")
     @PostMapping("/device-identifications")
     public ResponseEntity<DeviceIdentificationResponse> createIdentification(
             @Valid @RequestBody CreateIdentificationRequest r) {
@@ -113,13 +124,13 @@ public class AnalyticsController {
 
     // ------------------------------------------------------- consumption-rankings
 
-    @Operation(summary = "Rankings de consumo de un usuario")
+    @Operation(summary = "A user's consumption rankings")
     @GetMapping("/consumption-rankings/user/{userId}")
     public List<ConsumptionRankingResponse> rankings(@PathVariable String userId) {
         return service.rankingsByUser(userId).stream().map(ConsumptionRankingResponse::from).toList();
     }
 
-    @Operation(summary = "Registra un ranking de consumo")
+    @Operation(summary = "Records a consumption ranking")
     @PostMapping("/consumption-rankings")
     public ResponseEntity<ConsumptionRankingResponse> createRanking(
             @Valid @RequestBody CreateRankingRequest r) {

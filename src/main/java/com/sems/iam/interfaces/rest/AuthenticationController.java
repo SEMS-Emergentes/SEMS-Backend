@@ -81,7 +81,7 @@ public class AuthenticationController {
             @Valid @RequestBody ForgotPasswordRequest request) {
         accountRecoveryService.forgotPassword(request.emailAddress());
         return ResponseEntity.ok(Map.of("message",
-                "Si el correo esta registrado, recibiras un enlace para cambiar tu contrasena."));
+                "If that email is registered, you will receive a link to reset your password."));
     }
 
     /** Cambia la contrasena y cierra todas las sesiones abiertas. */

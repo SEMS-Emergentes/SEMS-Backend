@@ -98,6 +98,37 @@ public class EnergyCommandService {
         return alerts.save(alert);
     }
 
+    /** Tarifa comercial vigente para una categoria del pliego. */
+    public CommercialTariff currentTariff(String tariffCategory) {
+        return pricing.currentTariff(tariffCategory);
+    }
+
+    /**
+     * Estima la factura del mes de un local a partir de su consumo por franja y
+     * de la demanda maxima registrada.
+     *
+     * <p>El local aporta la categoria tarifaria y la potencia contratada;
+     * energia no los guarda ni los consulta, para no depender del modulo de
+     * organizaciones. Es quien llama el que los trae.
+     */
+    public BillBreakdown estimateBill(String tariffCategory, BigDecimal kwhPunta,
+                                      BigDecimal kwhFueraDePunta, BigDecimal demandaMaximaKw,
+                                      BigDecimal potenciaContratadaKw) {
+        BigDecimal punta = kwhPunta == null ? BigDecimal.ZERO : kwhPunta;
+        BigDecimal fuera = kwhFueraDePunta == null ? BigDecimal.ZERO : kwhFueraDePunta;
+        BigDecimal demanda = demandaMaximaKw == null ? BigDecimal.ZERO : demandaMaximaKw;
+
+        if (punta.signum() < 0 || fuera.signum() < 0 || demanda.signum() < 0) {
+            throw AppException.validation("consumption and demand cannot be negative");
+        }
+        if (potenciaContratadaKw == null || potenciaContratadaKw.signum() <= 0) {
+            throw AppException.validation("contracted_power_kw must be greater than zero");
+        }
+
+        return pricing.currentTariff(tariffCategory)
+                .calcular(punta, fuera, demanda, potenciaContratadaKw);
+    }
+
     public EnergyPrice currentPrice() {
         return pricing.currentPrice();
     }

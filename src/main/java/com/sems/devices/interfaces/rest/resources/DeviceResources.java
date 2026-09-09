@@ -25,6 +25,11 @@ public final class DeviceResources {
     public record CreateDeviceRequest(
             @NotBlank(message = "is required") String externalDeviceCode,
             @NotBlank(message = "is required") String userId,
+            // El local es obligatorio: el medidor, el contrato y la factura son
+            // suyos, no de la persona que da de alta el equipo.
+            @NotBlank(message = "is required") String siteId,
+            // La zona no: al abrir un local puede que aun no esten definidas.
+            String zoneId,
             @NotBlank(message = "is required") String deviceName,
             @NotBlank(message = "is required") String deviceType,
             String brand,
@@ -37,7 +42,9 @@ public final class DeviceResources {
             @NotBlank(message = "is required") String deviceType,
             String brand,
             String model,
-            @NotBlank(message = "is required") String connectionProtocol) {
+            @NotBlank(message = "is required") String connectionProtocol,
+            // Un equipo se traslada de zona; de local no, que seria otro suministro.
+            String zoneId) {
     }
 
     public record UpdateDeviceStatusRequest(
@@ -46,7 +53,7 @@ public final class DeviceResources {
 
     public record CreateBindingRequest(
             @NotBlank(message = "is required") String userId,
-            String homeId) {
+            String siteId) {
     }
 
     public record CreateConfigurationRequest(
@@ -67,13 +74,15 @@ public final class DeviceResources {
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record DeviceResource(
-            String deviceId, String externalDeviceCode, String userId, String deviceName,
-            String deviceType, String brand, String model, String connectionProtocol,
-            String status, Instant registeredAt, Instant updatedAt) {
+            String deviceId, String externalDeviceCode, String userId, String siteId, String zoneId,
+            String deviceName, String deviceType, String brand, String model,
+            String connectionProtocol, String status, Instant registeredAt, Instant updatedAt) {
 
         public static DeviceResource from(Device d) {
             return new DeviceResource(
                     d.getDeviceId().toString(), d.getExternalDeviceCode(), d.getUserId().toString(),
+                    d.getSiteId().toString(),
+                    d.getZoneId() == null ? null : d.getZoneId().toString(),
                     d.getDeviceName(), d.getDeviceType(), d.getBrand(), d.getModel(),
                     d.getConnectionProtocol().name(), d.getStatus().name(),
                     d.getRegisteredAt(), d.getUpdatedAt());
@@ -82,13 +91,13 @@ public final class DeviceResources {
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record DeviceBindingResource(
-            String bindingId, String deviceId, String userId, String homeId,
+            String bindingId, String deviceId, String userId, String siteId,
             String bindingStatus, Instant linkedAt, Instant unlinkedAt, Instant updatedAt) {
 
         public static DeviceBindingResource from(DeviceBinding b) {
             return new DeviceBindingResource(
                     b.getBindingId().toString(), b.getDeviceId().toString(), b.getUserId().toString(),
-                    b.getHomeId() == null ? null : b.getHomeId().toString(),
+                    b.getSiteId() == null ? null : b.getSiteId().toString(),
                     b.getBindingStatus().name(), b.getLinkedAt(), b.getUnlinkedAt(), b.getUpdatedAt());
         }
     }

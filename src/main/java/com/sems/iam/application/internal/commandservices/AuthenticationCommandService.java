@@ -193,8 +193,8 @@ public class AuthenticationCommandService {
         }
 
         // Case 2: first time we see this Google email -> create the account now.
-        // New social users get a sensible default role (RESIDENT).
-        RoleName defaultRole = RoleName.RESIDENT;
+        // New social users get a sensible default role (STAFF).
+        RoleName defaultRole = RoleName.STAFF;
         var role = roleRepository.findByName(defaultRole.name()).orElseThrow(() -> new NotFoundException("Role not found"));
         UserJpaEntity user = new UserJpaEntity();
         user.setUserId(UUID.randomUUID());

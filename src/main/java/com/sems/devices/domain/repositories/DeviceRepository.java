@@ -23,5 +23,11 @@ public interface DeviceRepository {
 
     List<Device> findByUserId(UUID userId);
 
+    /** Dispositivos vigentes instalados en un local. */
+    List<Device> findBySiteId(UUID siteId);
+
+    /** Dispositivos vigentes de una zona concreta. */
+    List<Device> findByZoneId(UUID zoneId);
+
     boolean existsByExternalCode(String externalDeviceCode);
 }

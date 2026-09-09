@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /** Medios de pago guardados del usuario. */
-@Tag(name = "Payment Methods", description = "Tarjetas guardadas del usuario")
+@Tag(name = "Payment Methods", description = "Cards saved by the user")
 @RestController
 @RequestMapping("/api/v1/payment-methods")
 @RequiredArgsConstructor
@@ -23,7 +23,7 @@ public class PaymentMethodController {
     private final PaymentMethodCommandService commands;
     private final PaymentQueryService queries;
 
-    @Operation(summary = "Guarda un medio de pago")
+    @Operation(summary = "Saves a payment method")
     @PostMapping
     public ResponseEntity<PaymentMethodResponse> register(
             @Valid @RequestBody RegisterPaymentMethodRequest request) {
@@ -32,19 +32,19 @@ public class PaymentMethodController {
         return ResponseEntity.status(HttpStatus.CREATED).body(PaymentMethodResponse.from(method));
     }
 
-    @Operation(summary = "Medios de pago de un usuario")
+    @Operation(summary = "A user's payment methods")
     @GetMapping("/user/{userId}")
     public List<PaymentMethodResponse> byUser(@PathVariable UUID userId) {
         return queries.methodsByUser(userId).stream().map(PaymentMethodResponse::from).toList();
     }
 
-    @Operation(summary = "Marca un medio de pago como predeterminado")
+    @Operation(summary = "Marks a payment method as the default one")
     @PutMapping("/{paymentMethodId}/default")
     public PaymentMethodResponse setDefault(@PathVariable UUID paymentMethodId) {
         return PaymentMethodResponse.from(commands.setDefault(paymentMethodId));
     }
 
-    @Operation(summary = "Elimina un medio de pago")
+    @Operation(summary = "Deletes a payment method")
     @DeleteMapping("/{paymentMethodId}")
     public ResponseEntity<Void> delete(@PathVariable UUID paymentMethodId) {
         commands.delete(paymentMethodId);

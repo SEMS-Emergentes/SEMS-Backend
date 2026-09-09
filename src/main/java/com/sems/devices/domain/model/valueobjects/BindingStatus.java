@@ -2,7 +2,7 @@ package com.sems.devices.domain.model.valueobjects;
 
 import com.sems.shared.errors.AppException;
 
-/** Estado del vinculo entre un dispositivo y un usuario u hogar. */
+/** Estado del vinculo entre un dispositivo y quien lo opera. */
 public enum BindingStatus {
     LINKED,
     UNLINKED,

@@ -16,7 +16,7 @@ public class RoleDataInitializer {
 
     @Bean
     public CommandLineRunner seedRoles() {
-        return args -> List.of("ADMIN", "RESIDENT").forEach(roleName -> roleRepository.findByName(roleName).orElseGet(() -> {
+        return args -> List.of("ADMIN", "STAFF").forEach(roleName -> roleRepository.findByName(roleName).orElseGet(() -> {
             RoleJpaEntity role = new RoleJpaEntity();
             role.setRoleId(UUID.randomUUID());
             role.setName(roleName);

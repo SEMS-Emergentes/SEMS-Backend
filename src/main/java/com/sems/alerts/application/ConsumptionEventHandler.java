@@ -36,12 +36,12 @@ public class ConsumptionEventHandler {
             if (!threshold.isBreachedBy(value)) {
                 continue;
             }
-            String message = "El dispositivo supero el umbral '%s': %s %s %s %s"
+            String message = "Device exceeded threshold '%s': %s %s %s %s"
                     .formatted(threshold.getThresholdName(), value, threshold.getOperator().symbol(),
                             threshold.getThresholdValue(), threshold.getMetric());
 
             alertCommands.createAlert(event.userId(), event.deviceId(), threshold.getThresholdId(),
-                    null, "threshold_exceeded", "Consumo por encima del umbral", message,
+                    null, "threshold_exceeded", "Consumption above threshold", message,
                     "high", null, event.recordedAt());
 
             log.info("Umbral {} roto por el dispositivo {}", threshold.getThresholdId(),

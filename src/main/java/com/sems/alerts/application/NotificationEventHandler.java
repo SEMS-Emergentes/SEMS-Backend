@@ -41,16 +41,16 @@ public class NotificationEventHandler {
     @TransactionalEventListener
     public void onUserRegistered(DomainEvents.UserRegistered event) {
         notifications.sendEmail(null, event.emailAddress(),
-                "Bienvenido a SEMS",
+                "Welcome to SEMS",
                 """
-                Hola:
+                Hello,
 
-                Tu cuenta en SEMS ya esta creada. Desde ahora puedes vincular tu
-                medidor EOS y empezar a ver en que se va tu recibo de luz.
+                Your SEMS account is ready. You can now link your meters and start
+                seeing where your electricity bill actually goes.
 
-                Entra aqui: %s
+                Sign in here: %s
 
-                El equipo de SEMS
+                The SEMS team
                 """.formatted(appBaseUrl));
     }
 
@@ -65,17 +65,17 @@ public class NotificationEventHandler {
     @TransactionalEventListener
     public void onVerificationRequested(DomainEvents.VerificationRequested event) {
         notifications.sendEmail(null, event.emailAddress(),
-                "Verifica tu cuenta de SEMS",
+                "Verify your SEMS account",
                 """
-                Hola:
+                Hello,
 
-                Para activar tu cuenta usa este codigo:
+                Use this code to activate your account:
 
                     %s
 
-                O entra directamente aqui: %s/verify?token=%s
+                Or open this link directly: %s/verify?token=%s
 
-                Si no fuiste tu, ignora este mensaje.
+                If this wasn't you, please ignore this message.
                 """.formatted(event.token(), appBaseUrl, event.token()));
     }
 
@@ -83,16 +83,16 @@ public class NotificationEventHandler {
     @TransactionalEventListener
     public void onPasswordResetRequested(DomainEvents.PasswordResetRequested event) {
         notifications.sendEmail(null, event.emailAddress(),
-                "Recupera tu contrasena de SEMS",
+                "Reset your SEMS password",
                 """
-                Hola:
+                Hello,
 
-                Recibimos una solicitud para cambiar tu contrasena. Usa este enlace:
+                We received a request to change your password. Use this link:
 
                     %s/reset-password?token=%s
 
-                El enlace caduca en una hora. Si no fuiste tu, ignora este mensaje
-                y tu contrasena seguira igual.
+                The link expires in one hour. If this wasn't you, ignore this
+                message and your password will stay the same.
                 """.formatted(appBaseUrl, event.token()));
     }
 
@@ -102,19 +102,19 @@ public class NotificationEventHandler {
     public void onPaymentProcessed(DomainEvents.PaymentProcessed event) {
         resolveEmail(event.userId()).ifPresent(email ->
                 notifications.sendEmail(null, email,
-                        "Comprobante de pago SEMS",
+                        "SEMS payment receipt",
                         """
-                        Hola:
+                        Hello,
 
-                        Registramos tu pago correctamente.
+                        Your payment was recorded successfully.
 
-                            Importe:      %s %s
-                            Referencia:   %s
-                            Estado:       %s
+                            Amount:       %s %s
+                            Reference:    %s
+                            Status:       %s
 
-                        Puedes ver el detalle en %s/subscription
+                        You can see the details at %s/subscription
 
-                        Gracias por usar SEMS.
+                        Thank you for using SEMS.
                         """.formatted(event.amount(), event.currency().toUpperCase(),
                                 event.paymentId(), event.status(), appBaseUrl)));
     }
@@ -125,15 +125,15 @@ public class NotificationEventHandler {
     public void onAlertTriggered(DomainEvents.AlertTriggered event) {
         resolveEmail(event.userId()).ifPresent(email ->
                 notifications.sendEmail(event.alertId(), email,
-                        "Alerta de consumo en tu hogar",
+                        "Consumption alert at your site",
                         """
-                        Hola:
+                        Hello,
 
                         %s
 
-                        Severidad: %s
+                        Severity: %s
 
-                        Revisa el detalle en %s/alerts
+                        See the details at %s/alerts
                         """.formatted(event.message(), event.severity(), appBaseUrl)));
     }
 

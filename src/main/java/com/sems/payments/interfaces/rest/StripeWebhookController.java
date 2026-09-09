@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
  * se calcula sobre los bytes exactos que envio Stripe, y cualquier
  * deserializacion intermedia los alteraria y haria fallar la comprobacion.
  */
-@Tag(name = "Webhooks", description = "Avisos del proveedor de pagos")
+@Tag(name = "Webhooks", description = "Notifications from the payment provider")
 @RestController
 @RequestMapping("/api/v1/webhooks")
 @RequiredArgsConstructor
@@ -23,7 +23,7 @@ public class StripeWebhookController {
 
     private final WebhookCommandService webhooks;
 
-    @Operation(summary = "Recibe un evento de Stripe")
+    @Operation(summary = "Receives a Stripe event")
     @PostMapping("/stripe")
     public ResponseEntity<Map<String, Object>> handleStripe(
             @RequestBody String payload,

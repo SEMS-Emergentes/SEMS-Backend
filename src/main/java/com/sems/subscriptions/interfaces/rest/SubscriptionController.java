@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
  * {@code /subscriptions/{subscriptionId}} para que "users" no se interprete
  * como un identificador.
  */
-@Tag(name = "Subscriptions", description = "Planes y suscripciones de usuario")
+@Tag(name = "Subscriptions", description = "User plans and subscriptions")
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
@@ -30,13 +30,13 @@ public class SubscriptionController {
 
     // ---------------------------------------------------------------- planes
 
-    @Operation(summary = "Lista los planes disponibles")
+    @Operation(summary = "Lists the available plans")
     @GetMapping("/subscription-plans")
     public List<PlanResource> plans() {
         return service.activePlans().stream().map(PlanResource::from).toList();
     }
 
-    @Operation(summary = "Obtiene un plan por su identificador")
+    @Operation(summary = "Gets a plan by its identifier")
     @GetMapping("/subscription-plans/{planId}")
     public PlanResource planById(@PathVariable UUID planId) {
         return PlanResource.from(service.planById(planId));
@@ -44,19 +44,19 @@ public class SubscriptionController {
 
     // --------------------------------------------------------- suscripciones
 
-    @Operation(summary = "Suscripciones de un usuario")
+    @Operation(summary = "A user's subscriptions")
     @GetMapping("/subscriptions/users/{userId}")
     public List<SubscriptionResource> byUser(@PathVariable String userId) {
         return service.subscriptionsByUser(userId).stream().map(SubscriptionResource::from).toList();
     }
 
-    @Operation(summary = "Obtiene una suscripcion por su identificador")
+    @Operation(summary = "Gets a subscription by its identifier")
     @GetMapping("/subscriptions/{subscriptionId}")
     public SubscriptionResource byId(@PathVariable UUID subscriptionId) {
         return SubscriptionResource.from(service.subscriptionById(subscriptionId));
     }
 
-    @Operation(summary = "Crea una suscripcion")
+    @Operation(summary = "Creates a subscription")
     @PostMapping("/subscriptions")
     public ResponseEntity<SubscriptionResource> create(
             @Valid @RequestBody CreateSubscriptionRequest request) {
@@ -65,13 +65,13 @@ public class SubscriptionController {
                 .body(SubscriptionResource.from(subscription));
     }
 
-    @Operation(summary = "Cancela una suscripcion")
+    @Operation(summary = "Cancels a subscription")
     @PatchMapping("/subscriptions/{subscriptionId}/cancel")
     public SubscriptionResource cancel(@PathVariable UUID subscriptionId) {
         return SubscriptionResource.from(service.cancel(subscriptionId));
     }
 
-    @Operation(summary = "Cambia el plan de una suscripcion")
+    @Operation(summary = "Changes the plan of a subscription")
     @PatchMapping("/subscriptions/{subscriptionId}/change-plan")
     public SubscriptionResource changePlan(@PathVariable UUID subscriptionId,
                                            @Valid @RequestBody ChangePlanRequest request) {

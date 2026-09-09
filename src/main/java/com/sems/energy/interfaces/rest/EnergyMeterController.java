@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /** Medidores EOS vinculados a cada usuario. */
-@Tag(name = "Energy Meters", description = "Registro y gestion de medidores inteligentes")
+@Tag(name = "Energy Meters", description = "Registration and management of smart meters")
 @RestController
 @RequestMapping("/api/v1/energy-meters")
 @RequiredArgsConstructor
@@ -23,7 +23,7 @@ public class EnergyMeterController {
     private final EnergyCommandService commands;
     private final EnergyQueryService queries;
 
-    @Operation(summary = "Registra un medidor nuevo")
+    @Operation(summary = "Registers a new meter")
     @PostMapping
     public ResponseEntity<MeterResponse> register(@Valid @RequestBody RegisterMeterRequest request) {
         var meter = commands.registerMeter(request.userId(), request.meterSerial(), request.model(),
@@ -31,19 +31,19 @@ public class EnergyMeterController {
         return ResponseEntity.status(HttpStatus.CREATED).body(MeterResponse.from(meter));
     }
 
-    @Operation(summary = "Lista los medidores de un usuario")
+    @Operation(summary = "Lists a user's meters")
     @GetMapping("/user/{userId}")
     public List<MeterResponse> byUser(@PathVariable String userId) {
         return queries.metersByUser(userId).stream().map(MeterResponse::from).toList();
     }
 
-    @Operation(summary = "Desactiva un medidor")
+    @Operation(summary = "Deactivates a meter")
     @PatchMapping("/{meterId}/deactivate")
     public MeterResponse deactivate(@PathVariable UUID meterId) {
         return MeterResponse.from(commands.deactivateMeter(meterId));
     }
 
-    @Operation(summary = "Obtiene un medidor por su identificador")
+    @Operation(summary = "Gets a meter by its identifier")
     @GetMapping("/{meterId}")
     public MeterResponse byId(@PathVariable UUID meterId) {
         return MeterResponse.from(queries.meterById(meterId));

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.sems.alerts.domain.model.entities.*;
 import com.sems.alerts.domain.model.valueobjects.Operator;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 
 /** Contrato JSON del modulo de alertas, en snake_case como el original. */
@@ -64,6 +65,37 @@ public final class AlertResources {
             String minSeverity,
             Instant quietHoursStart,
             Instant quietHoursEnd) {
+    }
+
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record CreateDemandRuleRequest(
+            @NotBlank(message = "is required") String siteId,
+            @NotBlank(message = "is required") String userId,
+            String ruleName,
+            @NotNull(message = "is required") Double contractedPowerKw,
+            Double warningPercent,
+            Boolean active) {
+    }
+
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record EvaluateDemandRequest(
+            @NotNull(message = "is required") Double demandKw) {
+    }
+
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record DemandRuleResponse(String demandRuleId, String siteId, String userId,
+                                     String ruleName, double contractedPowerKw,
+                                     double warningPercent, double warningThresholdKw,
+                                     boolean active, Instant createdAt) {
+
+        public static DemandRuleResponse from(DemandRule r) {
+            return new DemandRuleResponse(r.getDemandRuleId().toString(), r.getSiteId().toString(),
+                    r.getUserId().toString(), r.getRuleName(), r.getContractedPowerKw(),
+                    r.getWarningPercent(),
+                    Math.round(r.umbralDeAvisoKw() * 100.0) / 100.0, r.isActive(),
+                    r.getCreatedAt());
+        }
     }
 
     // -------------------------------------------------------------- respuestas

@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /** Bitacora de hechos de cada dispositivo. */
-@Tag(name = "Device Events", description = "Historial de eventos del dispositivo")
+@Tag(name = "Device Events", description = "Device event history")
 @RestController
 @RequestMapping("/api/v1/device-management")
 @RequiredArgsConstructor
@@ -23,7 +23,7 @@ public class DeviceEventController {
     private final DeviceCommandService commands;
     private final DeviceQueryService queries;
 
-    @Operation(summary = "Registra un evento del dispositivo")
+    @Operation(summary = "Records a device event")
     @PostMapping("/devices/{deviceId}/events")
     public ResponseEntity<DeviceEventResource> create(@PathVariable UUID deviceId,
                                                       @Valid @RequestBody CreateEventRequest request) {
@@ -32,7 +32,7 @@ public class DeviceEventController {
         return ResponseEntity.status(HttpStatus.CREATED).body(DeviceEventResource.from(event));
     }
 
-    @Operation(summary = "Lista los eventos de un dispositivo, del mas reciente al mas antiguo")
+    @Operation(summary = "Lists a device's events, newest first")
     @GetMapping("/devices/{deviceId}/events")
     public List<DeviceEventResource> byDevice(@PathVariable UUID deviceId) {
         return queries.eventsByDevice(deviceId).stream().map(DeviceEventResource::from).toList();

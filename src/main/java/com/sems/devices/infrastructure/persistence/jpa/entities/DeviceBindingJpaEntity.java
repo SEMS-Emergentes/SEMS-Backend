@@ -28,8 +28,8 @@ public class DeviceBindingJpaEntity {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @Column(name = "home_id")
-    private UUID homeId;
+    @Column(name = "site_id")
+    private UUID siteId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "binding_status", nullable = false, length = 20)

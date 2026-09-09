@@ -6,6 +6,7 @@ import com.sems.devices.domain.model.entities.DeviceConfiguration;
 import com.sems.devices.domain.model.entities.DeviceEvent;
 import com.sems.devices.domain.model.valueobjects.ConnectionProtocol;
 import com.sems.devices.domain.model.valueobjects.DeviceStatus;
+import com.sems.devices.domain.services.SiteDirectory;
 import com.sems.devices.domain.repositories.*;
 import com.sems.shared.errors.AppException;
 import com.sems.shared.events.DomainEventBus;
@@ -31,16 +32,18 @@ public class DeviceCommandService {
     private final DeviceBindingRepository bindings;
     private final DeviceConfigurationRepository configurations;
     private final DeviceEventRepository events;
+    private final SiteDirectory sites;
     private final DomainEventBus bus;
 
     @Transactional
-    public Device register(String externalCode, UUID userId, String name, String type,
-                           String brand, String model, String protocol) {
+    public Device register(String externalCode, UUID userId, UUID siteId, UUID zoneId, String name,
+                           String type, String brand, String model, String protocol) {
         if (externalCode != null && devices.existsByExternalCode(externalCode.trim())) {
             throw AppException.conflict("a device with that external_device_code already exists");
         }
-        Device device = Device.register(externalCode, userId, name, type, brand, model,
-                ConnectionProtocol.of(protocol));
+        validarUbicacion(siteId, zoneId);
+        Device device = Device.register(externalCode, userId, siteId, zoneId, name, type, brand,
+                model, ConnectionProtocol.of(protocol));
         Device saved = devices.save(device);
         bus.publish(new DomainEvents.DeviceRegistered(
                 saved.getUserId(), saved.getDeviceId(), saved.getDeviceName(), saved.getDeviceType()));
@@ -49,10 +52,31 @@ public class DeviceCommandService {
 
     @Transactional
     public Device update(UUID deviceId, String name, String type, String brand,
-                         String model, String protocol) {
+                         String model, String protocol, UUID zoneId) {
         Device device = require(deviceId);
-        device.updateDetails(name, type, brand, model, ConnectionProtocol.of(protocol));
+
+        // La zona nueva tiene que ser del mismo local. Sin comprobarlo se podria
+        // mover un equipo al local de otra empresa pasando el identificador a
+        // mano, y su consumo empezaria a contar en la factura equivocada.
+        if (zoneId != null && !sites.zoneBelongsToSite(zoneId, device.getSiteId())) {
+            throw AppException.validation("the zone does not belong to this device's site");
+        }
+
+        device.updateDetails(name, type, brand, model, ConnectionProtocol.of(protocol), zoneId);
         return devices.save(device);
+    }
+
+    /** Comprueba que el local existe y que la zona es suya. */
+    private void validarUbicacion(UUID siteId, UUID zoneId) {
+        if (siteId == null) {
+            throw AppException.validation("site_id is required");
+        }
+        if (!sites.siteIsActive(siteId)) {
+            throw AppException.notFound("site not found or not active");
+        }
+        if (zoneId != null && !sites.zoneBelongsToSite(zoneId, siteId)) {
+            throw AppException.validation("the zone does not belong to the given site");
+        }
     }
 
     @Transactional
@@ -76,13 +100,13 @@ public class DeviceCommandService {
     }
 
     @Transactional
-    public DeviceBinding bind(UUID deviceId, UUID userId, UUID homeId) {
+    public DeviceBinding bind(UUID deviceId, UUID userId, UUID siteId) {
         Device device = require(deviceId);
         device.ensureCanBeBound();
         if (bindings.findActiveByDeviceId(deviceId).isPresent()) {
             throw AppException.conflict("device already has an active binding");
         }
-        DeviceBinding saved = bindings.save(DeviceBinding.create(deviceId, userId, homeId));
+        DeviceBinding saved = bindings.save(DeviceBinding.create(deviceId, userId, siteId));
         bus.publish(new DomainEvents.DeviceLinked(userId, deviceId, saved.getBindingId()));
         return saved;
     }

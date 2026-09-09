@@ -18,12 +18,12 @@ import lombok.Setter;
  * logic to the database, so we keep two shapes and translate between them.
  *
  * Annotations:
- *  - @Entity + @Table tell JPA this class is a table named "users".
+ *  - @Entity + @Table tell JPA this class is a table named "iam_users".
  *  - @Getter/@Setter/@NoArgsConstructor are Lombok: they generate the getters,
  *    setters and the empty constructor that JPA requires.
  */
 @Entity
-@Table(name = "users")
+@Table(name = "iam_users")
 @Getter
 @Setter
 @NoArgsConstructor
