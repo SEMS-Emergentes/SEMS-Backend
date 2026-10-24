@@ -17,7 +17,7 @@ import lombok.Getter;
 public class EnergyMeter {
 
     private final UUID id;
-    private final String userId;
+    private String userId;
     private final String meterSerial;
     private final String model;
     private final String brand;
@@ -28,11 +28,12 @@ public class EnergyMeter {
     private final Instant registeredAt;
     private Instant lastSeenAt;
     private Instant updatedAt;
+    private Instant unlinkedAt;
 
     private EnergyMeter(UUID id, String userId, String meterSerial, String model, String brand,
                         String location, MeterStatus status, String firmwareVersion,
                         double maxPowerWatts, Instant registeredAt, Instant lastSeenAt,
-                        Instant updatedAt) {
+                        Instant updatedAt, Instant unlinkedAt) {
         this.id = id;
         this.userId = userId;
         this.meterSerial = meterSerial;
@@ -45,6 +46,7 @@ public class EnergyMeter {
         this.registeredAt = registeredAt;
         this.lastSeenAt = lastSeenAt;
         this.updatedAt = updatedAt;
+        this.unlinkedAt = unlinkedAt;
     }
 
     public static EnergyMeter register(String userId, String meterSerial, String model, String brand,
@@ -60,15 +62,16 @@ public class EnergyMeter {
                 model, brand, location, MeterStatus.ACTIVE,
                 firmwareVersion == null ? "1.0.0" : firmwareVersion,
                 maxPowerWatts == null ? 10000.0 : maxPowerWatts,
-                now, null, now);
+                now, null, now, null);
     }
 
     public static EnergyMeter rehydrate(UUID id, String userId, String meterSerial, String model,
                                         String brand, String location, MeterStatus status,
                                         String firmwareVersion, double maxPowerWatts,
-                                        Instant registeredAt, Instant lastSeenAt, Instant updatedAt) {
+                                        Instant registeredAt, Instant lastSeenAt, Instant updatedAt,
+                                        Instant unlinkedAt) {
         return new EnergyMeter(id, userId, meterSerial, model, brand, location, status,
-                firmwareVersion, maxPowerWatts, registeredAt, lastSeenAt, updatedAt);
+                firmwareVersion, maxPowerWatts, registeredAt, lastSeenAt, updatedAt, unlinkedAt);
     }
 
     public boolean isActive() {
@@ -82,6 +85,36 @@ public class EnergyMeter {
 
     public void deactivate() {
         this.status = MeterStatus.INACTIVE;
+        this.updatedAt = Instant.now();
+    }
+
+    public boolean isUnlinked() {
+        return this.unlinkedAt != null;
+    }
+
+    /**
+     * Desvincula el medidor de la cuenta. No borra nada: las lecturas y los
+     * consumos siguen en la base con su historico, y el medidor puede volver a
+     * vincularse registrando el mismo numero de serie. Es idempotente, para que
+     * repetir la peticion no mueva la fecha.
+     */
+    public void unlink() {
+        if (isUnlinked()) {
+            return;
+        }
+        this.status = MeterStatus.INACTIVE;
+        this.unlinkedAt = Instant.now();
+        this.updatedAt = this.unlinkedAt;
+    }
+
+    /** Vuelve a vincular un medidor desvinculado, posiblemente a otra cuenta. */
+    public void relink(String userId) {
+        if (isBlank(userId)) {
+            throw AppException.validation("user_id is required");
+        }
+        this.userId = userId.trim();
+        this.status = MeterStatus.ACTIVE;
+        this.unlinkedAt = null;
         this.updatedAt = Instant.now();
     }
 

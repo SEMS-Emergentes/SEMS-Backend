@@ -25,15 +25,39 @@ public class EnergyCommandService {
     private final EnergyPricingProvider pricing;
     private final DomainEventBus bus;
 
-    /** Vincular dos veces el mismo numero de serie es un conflicto. */
+    /**
+     * Vincular dos veces el mismo numero de serie es un conflicto, salvo que el
+     * medidor estuviera desvinculado: en ese caso se vuelve a vincular en lugar
+     * de crear una fila nueva, porque el numero de serie es unico en la tabla y
+     * el medidor fisico es el mismo.
+     */
     @Transactional
     public EnergyMeter registerMeter(String userId, String meterSerial, String model, String brand,
                                      String location, String firmwareVersion, Double maxPowerWatts) {
-        if (meterSerial != null && meters.findBySerial(meterSerial.trim()).isPresent()) {
-            throw AppException.conflict("Meter '" + meterSerial + "' is already registered");
+        if (meterSerial != null) {
+            EnergyMeter existing = meters.findBySerial(meterSerial.trim()).orElse(null);
+            if (existing != null && !existing.isUnlinked()) {
+                throw AppException.conflict("Meter '" + meterSerial + "' is already registered");
+            }
+            if (existing != null) {
+                existing.relink(userId);
+                return meters.save(existing);
+            }
         }
         return meters.save(EnergyMeter.register(userId, meterSerial, model, brand,
                 location, firmwareVersion, maxPowerWatts));
+    }
+
+    /**
+     * Desvincula el medidor de la cuenta. A diferencia de desactivar, deja de
+     * aparecer en la lista del usuario; el historico de lecturas se conserva.
+     */
+    @Transactional
+    public EnergyMeter unlinkMeter(UUID meterId) {
+        EnergyMeter meter = meters.findById(meterId)
+                .orElseThrow(() -> AppException.notFound("Meter '" + meterId + "' not found"));
+        meter.unlink();
+        return meters.save(meter);
     }
 
     @Transactional
