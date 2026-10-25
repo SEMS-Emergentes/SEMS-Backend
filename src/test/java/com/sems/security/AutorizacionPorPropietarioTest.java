@@ -169,6 +169,36 @@ class AutorizacionPorPropietarioTest {
     }
 
     @Test
+    @DisplayName("un recurso inexistente responde 404, no 403 ni 500")
+    void inexistenteEs404() throws Exception {
+        // La comprobacion de propiedad se deja pasar cuando el recurso no
+        // existe, para que el servicio de su 404 de siempre. Si alguna vez esto
+        // devuelve 403 es que una comprobacion esta negando por ausencia, y eso
+        // convierte un 404 legitimo en "prohibido".
+        String ninguno = "11111111-2222-3333-4444-555555555555";
+        ejecutar(get("/api/v1/sites/" + ninguno), tokenDuenio, 404);
+        ejecutar(get("/api/v1/organizations/" + ninguno), tokenDuenio, 404);
+        ejecutar(get("/api/v1/energy-meters/" + ninguno), tokenDuenio, 404);
+        ejecutar(get("/api/v1/alerts/" + ninguno), tokenDuenio, 404);
+        ejecutar(get("/api/v1/subscriptions/" + ninguno), tokenDuenio, 404);
+        ejecutar(get("/api/v1/payments/" + ninguno), tokenDuenio, 404);
+    }
+
+    @Test
+    @DisplayName("el verbo equivocado responde 405, no 500")
+    void verboEquivocadoEs405() throws Exception {
+        // /zones/{id} solo contesta a PUT y DELETE. Un GET caia en el catch-all
+        // y salia como 500 "Unexpected error".
+        ejecutar(get("/api/v1/zones/" + idLocal), tokenDuenio, 405);
+    }
+
+    @Test
+    @DisplayName("una ruta que no existe responde 404, no 500")
+    void rutaInexistenteEs404() throws Exception {
+        ejecutar(get("/api/v1/no-existe-esta-ruta"), tokenDuenio, 404);
+    }
+
+    @Test
     @DisplayName("sin token no se alcanza nada, como antes")
     void sinTokenSigueSiendo401() throws Exception {
         mvc.perform(get("/api/v1/sites/" + idLocal))

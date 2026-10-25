@@ -4,6 +4,7 @@ import com.sems.organizations.domain.model.aggregates.Site;
 import com.sems.organizations.domain.model.entities.Membership;
 import com.sems.organizations.domain.model.entities.Zone;
 import com.sems.organizations.domain.repositories.MembershipRepository;
+import com.sems.organizations.domain.repositories.OrganizationRepository;
 import com.sems.organizations.domain.repositories.SiteRepository;
 import com.sems.organizations.domain.repositories.ZoneRepository;
 import com.sems.shared.security.AccesoUsuario;
@@ -35,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AccesoOrganizaciones {
 
     private final MembershipRepository memberships;
+    private final OrganizationRepository organizations;
     private final SiteRepository sites;
     private final ZoneRepository zones;
     private final AccesoUsuario accesoUsuario;
@@ -118,6 +120,13 @@ public class AccesoOrganizaciones {
     private boolean conOrganizacion(String organizationId, ReglaDeOrganizacion regla) {
         UUID id = AccesoUsuario.aUuid(organizationId);
         if (id == null) {
+            return true;
+        }
+        // Una organizacion que no existe se deja pasar, igual que en el resto de
+        // modulos, para que el servicio responda su 404. Sin esta linea "no
+        // existe" y "no es tuya" caian en la misma rama y ambas daban 403, que
+        // es inconsistente con los demas recursos y oculta un 404 legitimo.
+        if (organizations.findById(id).isEmpty()) {
             return true;
         }
         return membresia(id).map(regla::cumple).orElseGet(accesoUsuario::esAdministrador);

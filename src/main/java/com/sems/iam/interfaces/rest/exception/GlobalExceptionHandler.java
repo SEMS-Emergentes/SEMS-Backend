@@ -5,7 +5,10 @@ import com.sems.iam.domain.model.exceptions.NotFoundException;
 import com.sems.iam.domain.model.exceptions.UnauthorizedException;
 import java.time.Instant;
 import java.util.Map;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -29,6 +32,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  *   validation errors     -> 400 Bad Request
  *   anything else         -> 500 Internal Server Error
  */
+// El ultimo, porque abajo hay un catch-all de Exception. Los manejadores
+// concretos de esta clase siguen atendiendo sus propios tipos; lo que no debe
+// pasar es que el catch-all se adelante a los de otro advice.
+@Order(Ordered.LOWEST_PRECEDENCE)
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -78,6 +85,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<?> handleNoResource(NoResourceFoundException ex) {
         return response(HttpStatus.NOT_FOUND, "No endpoint " + ex.getHttpMethod() + " " + ex.getResourcePath());
+    }
+
+    /**
+     * The path exists but not for this HTTP verb: that is a 405.
+     *
+     * <p>Sibling case to the one above, and it fell through the same hole. A GET
+     * on a route that only answers PUT and DELETE reported 500 "Unexpected
+     * error", which reads as a broken server when the real answer is "wrong
+     * verb for this path".
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<?> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        return response(HttpStatus.METHOD_NOT_ALLOWED,
+                "Method " + ex.getMethod() + " is not supported for this endpoint");
     }
 
     /**
