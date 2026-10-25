@@ -47,6 +47,18 @@ public final class EnergyRepositoryAdapters {
             return jpa.findByUserIdAndUnlinkedAtIsNullOrderByRegisteredAtDesc(userId).stream()
                     .map(EnergyMapper::toDomain).toList();
         }
+
+        @Override
+        public List<EnergyMeter> findBySiteId(String siteId) {
+            return jpa.findBySiteIdAndUnlinkedAtIsNullOrderByRegisteredAtDesc(siteId).stream()
+                    .map(EnergyMapper::toDomain).toList();
+        }
+
+        @Override
+        public List<EnergyMeter> findByZoneId(String zoneId) {
+            return jpa.findByZoneIdAndUnlinkedAtIsNullOrderByRegisteredAtDesc(zoneId).stream()
+                    .map(EnergyMapper::toDomain).toList();
+        }
     }
 
     @Repository

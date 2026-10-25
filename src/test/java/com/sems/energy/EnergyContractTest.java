@@ -22,12 +22,14 @@ class EnergyContractTest {
     @Test
     @DisplayName("La respuesta del medidor se serializa en snake_case")
     void meterResponseUsesSnakeCase() throws Exception {
-        EnergyMeter meter = EnergyMeter.register("user-1", "EOS-123", "EOS-X", "EOS",
-                "Cocina", "1.0.0", 10000.0);
+        EnergyMeter meter = EnergyMeter.register("user-1", "site-1", "zone-1", "EOS-123",
+                "EOS-X", "EOS", "Camara de frio 1", "1.0.0", 10000.0);
 
         String json = mapper.writeValueAsString(MeterResponse.from(meter));
 
         assertTrue(json.contains("\"user_id\""), "falta user_id: " + json);
+        assertTrue(json.contains("\"site_id\""), "falta site_id: " + json);
+        assertTrue(json.contains("\"zone_id\""), "falta zone_id: " + json);
         assertTrue(json.contains("\"meter_serial\""), "falta meter_serial");
         assertTrue(json.contains("\"max_power_watts\""), "falta max_power_watts");
         assertTrue(json.contains("\"registered_at\""), "falta registered_at");
@@ -54,7 +56,8 @@ class EnergyContractTest {
     @Test
     @DisplayName("Un medidor recien registrado esta activo y sin ultima lectura")
     void newMeterStartsActive() {
-        EnergyMeter meter = EnergyMeter.register("u", "S1", "m", "b", "l", null, null);
+        EnergyMeter meter = EnergyMeter.register("u", "site-1", null, "S1", "m", "b", "l",
+                null, null);
 
         assertTrue(meter.isActive());
         assertNull(meter.getLastSeenAt());

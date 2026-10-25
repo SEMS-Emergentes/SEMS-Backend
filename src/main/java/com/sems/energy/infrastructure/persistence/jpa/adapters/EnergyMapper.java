@@ -11,17 +11,17 @@ public final class EnergyMapper {
     }
 
     public static EnergyMeterJpaEntity toEntity(EnergyMeter m) {
-        return new EnergyMeterJpaEntity(m.getId(), m.getUserId(), m.getMeterSerial(), m.getModel(),
-                m.getBrand(), m.getLocation(), m.getStatus(), m.getFirmwareVersion(),
-                m.getMaxPowerWatts(), m.getRegisteredAt(), m.getLastSeenAt(), m.getUpdatedAt(),
-                m.getUnlinkedAt());
+        return new EnergyMeterJpaEntity(m.getId(), m.getUserId(), m.getSiteId(), m.getZoneId(),
+                m.getMeterSerial(), m.getModel(), m.getBrand(), m.getLocation(), m.getStatus(),
+                m.getFirmwareVersion(), m.getMaxPowerWatts(), m.getRegisteredAt(),
+                m.getLastSeenAt(), m.getUpdatedAt(), m.getUnlinkedAt());
     }
 
     public static EnergyMeter toDomain(EnergyMeterJpaEntity r) {
-        return EnergyMeter.rehydrate(r.getId(), r.getUserId(), r.getMeterSerial(), r.getModel(),
-                r.getBrand(), r.getLocation(), r.getStatus(), r.getFirmwareVersion(),
-                r.getMaxPowerWatts(), r.getRegisteredAt(), r.getLastSeenAt(), r.getUpdatedAt(),
-                r.getUnlinkedAt());
+        return EnergyMeter.rehydrate(r.getId(), r.getUserId(), r.getSiteId(), r.getZoneId(),
+                r.getMeterSerial(), r.getModel(), r.getBrand(), r.getLocation(), r.getStatus(),
+                r.getFirmwareVersion(), r.getMaxPowerWatts(), r.getRegisteredAt(),
+                r.getLastSeenAt(), r.getUpdatedAt(), r.getUnlinkedAt());
     }
 
     public static EnergyReadingJpaEntity toEntity(EnergyReading e) {

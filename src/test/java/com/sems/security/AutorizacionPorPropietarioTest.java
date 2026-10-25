@@ -83,8 +83,9 @@ class AutorizacionPorPropietarioTest {
         JsonNode medidor = cuerpo(ejecutar(post("/api/v1/energy-meters")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"user_id":"%s","meter_serial":"MED-0001","brand":"Schneider",
-                         "location":"Tablero general"}""".formatted(idDuenio)), tokenDuenio, 201));
+                        {"user_id":"%s","site_id":"%s","meter_serial":"MED-0001",
+                         "brand":"Schneider","location":"Tablero general"}"""
+                        .formatted(idDuenio, idLocal)), tokenDuenio, 201));
         idMedidor = medidor.get("id").asText();
     }
 

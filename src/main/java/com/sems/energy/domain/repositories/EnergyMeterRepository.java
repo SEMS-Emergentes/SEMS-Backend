@@ -11,4 +11,10 @@ public interface EnergyMeterRepository {
     Optional<EnergyMeter> findBySerial(String meterSerial);
     /** Los medidores vinculados a la cuenta. Los desvinculados no aparecen. */
     List<EnergyMeter> findByUserId(String userId);
+
+    /** Medidores vigentes instalados en un local. */
+    List<EnergyMeter> findBySiteId(String siteId);
+
+    /** Medidores vigentes de una zona concreta. */
+    List<EnergyMeter> findByZoneId(String zoneId);
 }

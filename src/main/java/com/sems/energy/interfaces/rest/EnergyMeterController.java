@@ -28,8 +28,9 @@ public class EnergyMeterController {
     @PreAuthorize("@accesoUsuario.esMio(#request.userId())")
     @PostMapping
     public ResponseEntity<MeterResponse> register(@Valid @RequestBody RegisterMeterRequest request) {
-        var meter = commands.registerMeter(request.userId(), request.meterSerial(), request.model(),
-                request.brand(), request.location(), request.firmwareVersion(), request.maxPowerWatts());
+        var meter = commands.registerMeter(request.userId(), request.siteId(), request.zoneId(),
+                request.meterSerial(), request.model(), request.brand(), request.location(),
+                request.firmwareVersion(), request.maxPowerWatts());
         return ResponseEntity.status(HttpStatus.CREATED).body(MeterResponse.from(meter));
     }
 
@@ -38,6 +39,28 @@ public class EnergyMeterController {
     @GetMapping("/user/{userId}")
     public List<MeterResponse> byUser(@PathVariable String userId) {
         return queries.metersByUser(userId).stream().map(MeterResponse::from).toList();
+    }
+
+    @Operation(summary = "Lists the meters installed in a site")
+    @PreAuthorize("@accesoOrganizaciones.local(#siteId)")
+    @GetMapping("/site/{siteId}")
+    public List<MeterResponse> bySite(@PathVariable String siteId) {
+        return queries.metersBySite(siteId).stream().map(MeterResponse::from).toList();
+    }
+
+    @Operation(summary = "Lists the meters of a zone")
+    @PreAuthorize("@accesoOrganizaciones.zona(#zoneId)")
+    @GetMapping("/zone/{zoneId}")
+    public List<MeterResponse> byZone(@PathVariable String zoneId) {
+        return queries.metersByZone(zoneId).stream().map(MeterResponse::from).toList();
+    }
+
+    @Operation(summary = "Reassigns a meter to another zone of the same site")
+    @PreAuthorize("@accesoEnergia.medidor(#meterId)")
+    @PatchMapping("/{meterId}/zone")
+    public MeterResponse reassignZone(@PathVariable UUID meterId,
+                                      @Valid @RequestBody ReassignMeterZoneRequest request) {
+        return MeterResponse.from(commands.reassignMeterZone(meterId, request.zoneId()));
     }
 
     @Operation(summary = "Unlinks a meter from its account")

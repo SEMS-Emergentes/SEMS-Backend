@@ -29,6 +29,11 @@ public final class EnergyResources {
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public record RegisterMeterRequest(
             @NotBlank(message = "is required") String userId,
+            // El local es obligatorio: la tarifa, la potencia contratada y el
+            // recibo son del suministro, no de quien da de alta el equipo.
+            @NotBlank(message = "is required") String siteId,
+            // La zona no: al abrir un local puede que aun no esten definidas.
+            String zoneId,
             @NotBlank(message = "is required") String meterSerial,
             String model,
             String brand,
@@ -52,17 +57,24 @@ public final class EnergyResources {
             String phase) {
     }
 
+    /** Peticion de traslado de un medidor a otra zona del mismo local. */
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record ReassignMeterZoneRequest(String zoneId) {
+    }
+
     // -------------------------------------------------------------- respuestas
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public record MeterResponse(
-            String id, String userId, String meterSerial, String model, String brand,
+            String id, String userId, String siteId, String zoneId,
+            String meterSerial, String model, String brand,
             String location, MeterStatus status, String firmwareVersion, double maxPowerWatts,
             Instant registeredAt, Instant lastSeenAt, Instant updatedAt) {
 
         public static MeterResponse from(EnergyMeter m) {
-            return new MeterResponse(m.getId().toString(), m.getUserId(), m.getMeterSerial(),
+            return new MeterResponse(m.getId().toString(), m.getUserId(), m.getSiteId(),
+                    m.getZoneId(), m.getMeterSerial(),
                     m.getModel(), m.getBrand(), m.getLocation(), m.getStatus(),
                     m.getFirmwareVersion(), m.getMaxPowerWatts(), m.getRegisteredAt(),
                     m.getLastSeenAt(), m.getUpdatedAt());
