@@ -6,6 +6,7 @@ import com.sems.iam.domain.model.exceptions.UnauthorizedException;
 import java.time.Instant;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -64,6 +65,19 @@ public class GlobalExceptionHandler {
                 .map(e -> e.getField() + " " + e.getDefaultMessage())
                 .orElse("Validation error");
         return response(HttpStatus.BAD_REQUEST, message);
+    }
+
+    /**
+     * A URL that matches no route is a 404, not a server failure.
+     *
+     * <p>Without this handler the catch-all below turned every mistyped path
+     * into a 500 with "Unexpected error", which points whoever is integrating
+     * at the wrong problem: it reads as "the server broke" when the real answer
+     * is "that endpoint does not exist".
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<?> handleNoResource(NoResourceFoundException ex) {
+        return response(HttpStatus.NOT_FOUND, "No endpoint " + ex.getHttpMethod() + " " + ex.getResourcePath());
     }
 
     /**

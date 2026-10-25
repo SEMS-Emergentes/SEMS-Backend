@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.sems.analytics.domain.model.entities.*;
 import com.sems.analytics.domain.model.valueobjects.RankingItem;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
@@ -104,10 +106,14 @@ public final class AnalyticsResources {
             @NotBlank(message = "is required") String siteId,
             @NotBlank(message = "is required") String tariffCategory,
             @NotNull(message = "is required") Double contractedPowerKw,
-            int predictionYear,
-            int predictionMonth,
-            Instant periodStart,
-            Instant periodEnd,
+            @Min(value = 2000, message = "must be a four-digit year") int predictionYear,
+            @Min(value = 1, message = "must be between 1 and 12")
+            @Max(value = 12, message = "must be between 1 and 12") int predictionMonth,
+            // Sin estas dos fechas la proyeccion no tiene periodo al que
+            // referirse y acababa en un 500 por una columna obligatoria vacia.
+            // Faltar un dato de la peticion es un 400, no un fallo del servidor.
+            @NotNull(message = "is required") Instant periodStart,
+            @NotNull(message = "is required") Instant periodEnd,
             double kwhPeak,
             double kwhOffPeak,
             double maxDemandKw,
