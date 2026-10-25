@@ -1,5 +1,6 @@
 package com.sems.organizations.interfaces.rest;
 
+import com.sems.iam.interfaces.acl.IamAcl;
 import com.sems.organizations.application.OrganizationCommandService;
 import com.sems.organizations.application.OrganizationQueryService;
 import com.sems.organizations.interfaces.rest.resources.OrganizationResources.*;
@@ -23,6 +24,8 @@ public class OrganizationController {
 
     private final OrganizationCommandService commands;
     private final OrganizationQueryService queries;
+    // La unica puerta por la que este modulo pregunta por un usuario.
+    private final IamAcl iam;
 
     @Operation(summary = "Registers a chain and makes its creator the administrator")
     @PostMapping("/organizations")
@@ -81,18 +84,29 @@ public class OrganizationController {
     @GetMapping("/organizations/{organizationId}/members")
     public List<MembershipResource> listMembers(@PathVariable String organizationId) {
         return queries.listMemberships(parseId(organizationId, "organization_id")).stream()
-                .map(MembershipResource::from).toList();
+                .map(m -> MembershipResource.from(m, iam.emailOf(m.getUserId()).orElse(null)))
+                .toList();
     }
 
     @Operation(summary = "Grants access to a person, or changes their existing access")
     @PostMapping("/organizations/{organizationId}/members")
     public ResponseEntity<MembershipResource> grantMembership(
             @PathVariable String organizationId, @Valid @RequestBody GrantMembershipRequest request) {
+        // El correo se traduce a identificador aqui, en la frontera: el modulo de
+        // organizaciones sigue trabajando con identificadores y no sabe que IAM
+        // guarda correos.
+        UUID userId = iam.idOf(request.email())
+                .orElseThrow(() -> AppException.notFound(
+                        "No user is registered with '" + request.email() + "'"));
         var vinculo = commands.grantMembership(parseId(organizationId, "organization_id"),
-                parseId(request.userId(), "user_id"), request.role(),
+                userId, request.role(),
                 request.siteId() == null || request.siteId().isBlank()
                         ? null : parseId(request.siteId(), "site_id"));
-        return ResponseEntity.status(HttpStatus.CREATED).body(MembershipResource.from(vinculo));
+        // Se devuelve el correo tal como esta guardado, no tal como vino: si el
+        // administrador lo escribio con mayusculas, la respuesta no debe
+        // sugerir que se guardo asi.
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(MembershipResource.from(vinculo, iam.emailOf(userId).orElse(null)));
     }
 
     @Operation(summary = "Revokes a person's access")
