@@ -2,6 +2,7 @@ package com.sems.iam.application.internal.commandservices;
 
 import com.sems.iam.application.internal.outboundservices.IamEventPublisher;
 import com.sems.iam.domain.model.aggregates.UserAggregate;
+import com.sems.iam.domain.model.exceptions.ConflictException;
 import com.sems.iam.domain.model.exceptions.NotFoundException;
 import com.sems.iam.domain.model.exceptions.UnauthorizedException;
 import com.sems.iam.domain.model.valueobjects.EmailAddress;
@@ -10,6 +11,7 @@ import com.sems.iam.domain.services.PasswordHashingService;
 import com.sems.iam.domain.services.TokenService;
 import com.sems.iam.infrastructure.persistence.jpa.repositories.*;
 import com.sems.iam.interfaces.rest.resources.LoginResponse;
+import com.sems.organizations.interfaces.acl.OrganizationsAcl;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -33,6 +35,8 @@ public class AccountRecoveryService {
 
     public static final String STATUS_PENDING = "PENDING";
     public static final String STATUS_ACTIVE = "ACTIVE";
+    /** Cuenta dada de baja a peticion de su titular. No vuelve a entrar. */
+    public static final String STATUS_CLOSED = "CLOSED";
 
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
@@ -40,6 +44,7 @@ public class AccountRecoveryService {
     private final TokenService tokenService;
     private final AuthTokenService authTokens;
     private final IamEventPublisher eventPublisher;
+    private final OrganizationsAcl organizaciones;
 
     /**
      * Entrega un par de tokens nuevo a partir de uno de refresco valido.
@@ -52,6 +57,45 @@ public class AccountRecoveryService {
         UserJpaEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new UnauthorizedException("Invalid refresh token"));
         return buildSession(user);
+    }
+
+    /**
+     * Da de baja la cuenta a peticion de su titular.
+     *
+     * <p>La fila se conserva porque lecturas, alertas, suscripciones y pagos la
+     * referencian por identificador, y borrarla dejaria todo eso huerfano. Lo
+     * que si desaparece es el dato personal: el correo se sustituye por uno de
+     * un dominio reservado que no puede existir ({@code .invalid}, RFC 2606).
+     *
+     * <p>Sustituirlo, y no solo marcar la cuenta, es lo que hace que esto sea
+     * una baja de verdad y no una bandera: el correo es el dato identificativo
+     * que la Ley 29733 permite cancelar, y ademas asi la direccion queda libre
+     * para volver a registrarse.
+     *
+     * <p>Se rechaza si la persona es la unica administradora de alguna
+     * organizacion vigente: cerrarla dejaria esa organizacion sin nadie que
+     * pueda gestionarla ni darla de baja. Primero se archiva la organizacion, o
+     * se nombra a otro administrador.
+     */
+    @Transactional
+    public void closeAccount(UUID userId) {
+        UserJpaEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+        if (STATUS_CLOSED.equalsIgnoreCase(String.valueOf(user.getStatus()))) {
+            return;
+        }
+        if (organizaciones.esUnicoAdministradorDeAlgunaOrganizacion(userId)) {
+            throw new ConflictException("you are the only administrator of an active organization; "
+                    + "archive it or name another administrator before closing your account");
+        }
+
+        user.setEmailAddress("baja-" + userId + "@sems.invalid");
+        user.setStatus(STATUS_CLOSED);
+        user.setUpdatedAt(Instant.now());
+        userRepository.save(user);
+
+        // Sin esto la cuenta seguiria renovando sesiones despues de la baja.
+        authTokens.revoke(userId, null);
     }
 
     /** Cierra la sesion. Sin token concreto, cierra todas las del usuario. */

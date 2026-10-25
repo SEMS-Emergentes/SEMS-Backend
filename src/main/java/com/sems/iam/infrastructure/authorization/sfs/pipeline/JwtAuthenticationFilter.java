@@ -1,6 +1,8 @@
 package com.sems.iam.infrastructure.authorization.sfs.pipeline;
 
+import com.sems.iam.application.internal.commandservices.AccountRecoveryService;
 import com.sems.iam.infrastructure.authorization.sfs.services.SecurityUserFactory;
+import com.sems.iam.infrastructure.persistence.jpa.repositories.UserRepository;
 import com.sems.iam.infrastructure.tokens.jwt.services.JwtService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -26,10 +28,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final SecurityUserFactory securityUserFactory;
+    private final UserRepository users;
 
-    public JwtAuthenticationFilter(JwtService jwtService, SecurityUserFactory securityUserFactory) {
+    public JwtAuthenticationFilter(JwtService jwtService, SecurityUserFactory securityUserFactory,
+                                   UserRepository users) {
         this.jwtService = jwtService;
         this.securityUserFactory = securityUserFactory;
+        this.users = users;
     }
 
     @Override
@@ -79,11 +84,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // ...build a Spring Security "principal" (the logged-in user) and an
         // Authentication object. The null is the credentials (password), which
         // we do not need because the token already proved the identity.
+        // Una cuenta dada de baja deja de entrar en el acto.
+        //
+        // El principal se arma con los claims del token, que no saben nada de
+        // lo ocurrido desde que se emitio. Sin esta consulta, quien cerrara su
+        // cuenta seguiria operando hasta que el token caducara, dos horas
+        // despues. Es una lectura por clave primaria, del mismo orden que las
+        // que ya hace cada comprobacion de propiedad.
+        if (cuentaDadaDeBaja(userId)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         var principal = securityUserFactory.create(userId, email, roles);
         var auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
         // Storing it in the SecurityContext is what marks the request as
         // authenticated for the rest of the processing.
         SecurityContextHolder.getContext().setAuthentication(auth);
         filterChain.doFilter(request, response);
+    }
+
+    /** Si la cuenta ya no existe, tampoco se deja pasar. */
+    private boolean cuentaDadaDeBaja(UUID userId) {
+        return users.findById(userId)
+                .map(u -> AccountRecoveryService.STATUS_CLOSED
+                        .equalsIgnoreCase(String.valueOf(u.getStatus())))
+                .orElse(true);
     }
 }

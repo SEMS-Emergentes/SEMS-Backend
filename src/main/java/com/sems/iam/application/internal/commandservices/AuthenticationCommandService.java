@@ -137,6 +137,12 @@ public class AuthenticationCommandService {
         if (!passwordHashingService.matches(command.password(), user.getPasswordHash())) throw new UnauthorizedException("Invalid credentials");
         // Una cuenta sin verificar no entra. El mensaje si es explicito aqui
         // porque las credenciales ya se comprobaron: no filtra nada.
+        // Una cuenta dada de baja no vuelve a entrar, se exija verificacion o no.
+        // Va antes que la comprobacion de PENDING porque una baja es definitiva
+        // y no depende de la configuracion del entorno.
+        if (AccountRecoveryService.STATUS_CLOSED.equalsIgnoreCase(String.valueOf(user.getStatus()))) {
+            throw new UnauthorizedException("Account is closed");
+        }
         if (requireVerification && "PENDING".equalsIgnoreCase(String.valueOf(user.getStatus()))) {
             throw new UnauthorizedException("Account is not verified yet");
         }

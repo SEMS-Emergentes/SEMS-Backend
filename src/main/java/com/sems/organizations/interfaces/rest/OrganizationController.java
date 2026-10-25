@@ -129,6 +129,14 @@ public class OrganizationController {
 
     // ------------------------------------------------------------------ zonas
 
+    @Operation(summary = "Archives an organization and everything under it")
+    @PreAuthorize("@accesoOrganizaciones.administraOrganizacion(#organizationId)")
+    @DeleteMapping("/organizations/{organizationId}")
+    public ResponseEntity<Void> archiveOrganization(@PathVariable String organizationId) {
+        commands.archiveOrganization(parseId(organizationId, "organization_id"));
+        return ResponseEntity.noContent().build();
+    }
+
     @Operation(summary = "Gets a site")
     @PreAuthorize("@accesoOrganizaciones.local(#siteId)")
     @GetMapping("/sites/{siteId}")
