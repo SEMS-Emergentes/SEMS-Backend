@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -45,18 +46,21 @@ public class SubscriptionController {
     // --------------------------------------------------------- suscripciones
 
     @Operation(summary = "A user's subscriptions")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/subscriptions/users/{userId}")
     public List<SubscriptionResource> byUser(@PathVariable String userId) {
         return service.subscriptionsByUser(userId).stream().map(SubscriptionResource::from).toList();
     }
 
     @Operation(summary = "Gets a subscription by its identifier")
+    @PreAuthorize("@accesoSuscripciones.suscripcion(#subscriptionId)")
     @GetMapping("/subscriptions/{subscriptionId}")
     public SubscriptionResource byId(@PathVariable UUID subscriptionId) {
         return SubscriptionResource.from(service.subscriptionById(subscriptionId));
     }
 
     @Operation(summary = "Creates a subscription")
+    @PreAuthorize("@accesoUsuario.esMio(#request.userId())")
     @PostMapping("/subscriptions")
     public ResponseEntity<SubscriptionResource> create(
             @Valid @RequestBody CreateSubscriptionRequest request) {
@@ -66,12 +70,14 @@ public class SubscriptionController {
     }
 
     @Operation(summary = "Cancels a subscription")
+    @PreAuthorize("@accesoSuscripciones.suscripcion(#subscriptionId)")
     @PatchMapping("/subscriptions/{subscriptionId}/cancel")
     public SubscriptionResource cancel(@PathVariable UUID subscriptionId) {
         return SubscriptionResource.from(service.cancel(subscriptionId));
     }
 
     @Operation(summary = "Changes the plan of a subscription")
+    @PreAuthorize("@accesoSuscripciones.suscripcion(#subscriptionId)")
     @PatchMapping("/subscriptions/{subscriptionId}/change-plan")
     public SubscriptionResource changePlan(@PathVariable UUID subscriptionId,
                                            @Valid @RequestBody ChangePlanRequest request) {

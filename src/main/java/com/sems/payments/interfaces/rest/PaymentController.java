@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,7 @@ public class PaymentController {
     private final PaymentQueryService queries;
 
     @Operation(summary = "Charges a saved card")
+    @PreAuthorize("@accesoUsuario.esMio(#request.userId())")
     @PostMapping("/process")
     public ResponseEntity<ProcessPaymentResponse> process(
             @Valid @RequestBody ProcessPaymentRequest request) {
@@ -42,6 +44,7 @@ public class PaymentController {
      * la tarjeta se introducen en la pagina de Stripe, nunca en SEMS.
      */
     @Operation(summary = "Creates a Stripe Checkout session")
+    @PreAuthorize("@accesoUsuario.esMio(#request.userId())")
     @PostMapping("/checkout-session")
     public CheckoutSessionResponse createCheckoutSession(
             @Valid @RequestBody CreateCheckoutRequest request) {
@@ -55,12 +58,14 @@ public class PaymentController {
     }
 
     @Operation(summary = "A user's payments")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/user/{userId}")
     public List<PaymentResponse> byUser(@PathVariable UUID userId) {
         return queries.paymentsByUser(userId).stream().map(PaymentResponse::from).toList();
     }
 
     @Operation(summary = "Payments of a subscription")
+    @PreAuthorize("@accesoSuscripciones.suscripcion(#subscriptionId)")
     @GetMapping("/subscription/{subscriptionId}")
     public List<PaymentResponse> bySubscription(@PathVariable UUID subscriptionId) {
         return queries.paymentsBySubscription(subscriptionId).stream()
@@ -68,6 +73,7 @@ public class PaymentController {
     }
 
     @Operation(summary = "Gets a payment by its identifier")
+    @PreAuthorize("@accesoPagos.pago(#paymentId)")
     @GetMapping("/{paymentId}")
     public PaymentResponse byId(@PathVariable UUID paymentId) {
         return PaymentResponse.from(queries.paymentById(paymentId));

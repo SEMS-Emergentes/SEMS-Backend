@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,7 @@ public class OrganizationController {
     private final IamAcl iam;
 
     @Operation(summary = "Registers a chain and makes its creator the administrator")
+    @PreAuthorize("@accesoUsuario.esMio(#request.ownerUserId())")
     @PostMapping("/organizations")
     public ResponseEntity<OrganizationResource> create(
             @Valid @RequestBody CreateOrganizationRequest request) {
@@ -39,6 +41,7 @@ public class OrganizationController {
     }
 
     @Operation(summary = "Organizations a person belongs to, with their role")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/users/{userId}/organizations")
     public List<MyOrganizationResource> mine(@PathVariable String userId) {
         return queries.listMine(parseId(userId, "user_id")).stream()
@@ -47,12 +50,14 @@ public class OrganizationController {
     }
 
     @Operation(summary = "Gets an organization")
+    @PreAuthorize("@accesoOrganizaciones.organizacion(#organizationId)")
     @GetMapping("/organizations/{organizationId}")
     public OrganizationResource get(@PathVariable String organizationId) {
         return OrganizationResource.from(queries.get(parseId(organizationId, "organization_id")));
     }
 
     @Operation(summary = "Updates the organization details")
+    @PreAuthorize("@accesoOrganizaciones.administraOrganizacion(#organizationId)")
     @PutMapping("/organizations/{organizationId}")
     public OrganizationResource update(@PathVariable String organizationId,
                                        @Valid @RequestBody UpdateOrganizationRequest request) {
@@ -63,6 +68,7 @@ public class OrganizationController {
     // ----------------------------------------------------------------- locales
 
     @Operation(summary = "Registers a site in the organization")
+    @PreAuthorize("@accesoOrganizaciones.administraOrganizacion(#organizationId)")
     @PostMapping("/organizations/{organizationId}/sites")
     public ResponseEntity<SiteResource> createSite(@PathVariable String organizationId,
                                                    @Valid @RequestBody CreateSiteRequest request) {
@@ -74,6 +80,7 @@ public class OrganizationController {
     }
 
     @Operation(summary = "Active sites of the organization")
+    @PreAuthorize("@accesoOrganizaciones.organizacion(#organizationId)")
     @GetMapping("/organizations/{organizationId}/sites")
     public List<SiteResource> listSites(@PathVariable String organizationId) {
         return queries.listSites(parseId(organizationId, "organization_id")).stream()
@@ -81,6 +88,7 @@ public class OrganizationController {
     }
 
     @Operation(summary = "People with access to the organization")
+    @PreAuthorize("@accesoOrganizaciones.organizacion(#organizationId)")
     @GetMapping("/organizations/{organizationId}/members")
     public List<MembershipResource> listMembers(@PathVariable String organizationId) {
         return queries.listMemberships(parseId(organizationId, "organization_id")).stream()
@@ -89,6 +97,7 @@ public class OrganizationController {
     }
 
     @Operation(summary = "Grants access to a person, or changes their existing access")
+    @PreAuthorize("@accesoOrganizaciones.administraOrganizacion(#organizationId)")
     @PostMapping("/organizations/{organizationId}/members")
     public ResponseEntity<MembershipResource> grantMembership(
             @PathVariable String organizationId, @Valid @RequestBody GrantMembershipRequest request) {
@@ -110,6 +119,7 @@ public class OrganizationController {
     }
 
     @Operation(summary = "Revokes a person's access")
+    @PreAuthorize("@accesoOrganizaciones.administraOrganizacion(#organizationId)")
     @DeleteMapping("/organizations/{organizationId}/members/{membershipId}")
     public ResponseEntity<Void> revokeMembership(@PathVariable String organizationId,
                                                  @PathVariable String membershipId) {
@@ -120,12 +130,14 @@ public class OrganizationController {
     // ------------------------------------------------------------------ zonas
 
     @Operation(summary = "Gets a site")
+    @PreAuthorize("@accesoOrganizaciones.local(#siteId)")
     @GetMapping("/sites/{siteId}")
     public SiteResource getSite(@PathVariable String siteId) {
         return SiteResource.from(queries.getSite(parseId(siteId, "site_id")));
     }
 
     @Operation(summary = "Updates a site")
+    @PreAuthorize("@accesoOrganizaciones.modificaLocal(#siteId)")
     @PutMapping("/sites/{siteId}")
     public SiteResource updateSite(@PathVariable String siteId,
                                    @Valid @RequestBody UpdateSiteRequest request) {
@@ -136,6 +148,7 @@ public class OrganizationController {
     }
 
     @Operation(summary = "Archives a site")
+    @PreAuthorize("@accesoOrganizaciones.modificaLocal(#siteId)")
     @DeleteMapping("/sites/{siteId}")
     public ResponseEntity<Void> archiveSite(@PathVariable String siteId) {
         commands.archiveSite(parseId(siteId, "site_id"));
@@ -143,6 +156,7 @@ public class OrganizationController {
     }
 
     @Operation(summary = "Active zones of the site")
+    @PreAuthorize("@accesoOrganizaciones.local(#siteId)")
     @GetMapping("/sites/{siteId}/zones")
     public List<ZoneResource> listZones(@PathVariable String siteId) {
         return queries.listZones(parseId(siteId, "site_id")).stream().map(ZoneResource::from)
@@ -150,6 +164,7 @@ public class OrganizationController {
     }
 
     @Operation(summary = "Creates a zone within the site")
+    @PreAuthorize("@accesoOrganizaciones.modificaLocal(#siteId)")
     @PostMapping("/sites/{siteId}/zones")
     public ResponseEntity<ZoneResource> createZone(@PathVariable String siteId,
                                                    @Valid @RequestBody CreateZoneRequest request) {
@@ -159,6 +174,7 @@ public class OrganizationController {
     }
 
     @Operation(summary = "Updates a zone")
+    @PreAuthorize("@accesoOrganizaciones.modificaZona(#zoneId)")
     @PutMapping("/zones/{zoneId}")
     public ZoneResource updateZone(@PathVariable String zoneId,
                                    @Valid @RequestBody UpdateZoneRequest request) {
@@ -167,6 +183,7 @@ public class OrganizationController {
     }
 
     @Operation(summary = "Archives a zone")
+    @PreAuthorize("@accesoOrganizaciones.modificaZona(#zoneId)")
     @DeleteMapping("/zones/{zoneId}")
     public ResponseEntity<Void> archiveZone(@PathVariable String zoneId) {
         commands.archiveZone(parseId(zoneId, "zone_id"));

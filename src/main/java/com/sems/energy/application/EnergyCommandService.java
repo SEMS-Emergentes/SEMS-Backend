@@ -80,15 +80,28 @@ public class EnergyCommandService {
                                        double powerWatts, double voltage, double current,
                                        double frequency, double energyKwh, Instant timestamp,
                                        String readingType, String phase) {
+        // El medidor tiene que existir y ser de quien manda la lectura.
+        //
+        // Antes la lectura se guardaba primero y el medidor se buscaba despues
+        // "por si acaso": si no aparecia, la lectura quedaba igualmente grabada
+        // con un medidor que no existe. Eso devolvia 201 a quien enviaba datos
+        // mal referenciados y dejaba filas que ninguna consulta por medidor
+        // vuelve a encontrar, el mismo tipo de fuga silenciosa que las
+        // notificaciones huerfanas.
+        EnergyMeter medidor = parseUuid(meterId).flatMap(meters::findById)
+                .orElseThrow(() -> AppException.notFound("Meter '" + meterId + "' not found"));
+        if (medidor.getUserId() == null || !medidor.getUserId().equalsIgnoreCase(
+                userId == null ? "" : userId.trim())) {
+            throw AppException.validation("the meter is not registered to that user");
+        }
+
         PowerReading measurement = new PowerReading(powerWatts, voltage, current, frequency, energyKwh);
         EnergyReading saved = readings.save(EnergyReading.record(userId, meterId, deviceId,
                 measurement, timestamp, readingType, phase));
 
         // El medidor deja constancia de que sigue vivo.
-        parseUuid(meterId).flatMap(meters::findById).ifPresent(meter -> {
-            meter.updateLastSeen();
-            meters.save(meter);
-        });
+        medidor.updateLastSeen();
+        meters.save(medidor);
 
         parseUuid(userId).ifPresent(uid -> bus.publish(new DomainEvents.ReadingProcessed(
                 uid, parseUuid(deviceId).orElse(null), parseUuid(meterId).orElse(null),
@@ -124,7 +137,7 @@ public class EnergyCommandService {
 
     /** Tarifa comercial vigente para una categoria del pliego. */
     public CommercialTariff currentTariff(String tariffCategory) {
-        return pricing.currentTariff(tariffCategory);
+        return pricing.currentTariff(TariffCategory.normalizar(tariffCategory));
     }
 
     /**
@@ -149,7 +162,7 @@ public class EnergyCommandService {
             throw AppException.validation("contracted_power_kw must be greater than zero");
         }
 
-        return pricing.currentTariff(tariffCategory)
+        return pricing.currentTariff(TariffCategory.normalizar(tariffCategory))
                 .calcular(punta, fuera, demanda, potenciaContratadaKw);
     }
 

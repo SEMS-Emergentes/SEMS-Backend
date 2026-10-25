@@ -5,6 +5,7 @@ import com.sems.subscriptions.domain.model.entities.SubscriptionPlan;
 import com.sems.subscriptions.domain.repositories.SubscriptionRepositories.PlanRepository;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,8 +16,17 @@ import org.springframework.stereotype.Component;
 /**
  * Carga los tres planes por defecto la primera vez que arranca el sistema.
  *
- * <p>Porta el seeder del servicio en Go. Solo actua si no hay ningun plan, de
- * modo que reiniciar la aplicacion nunca duplica ni sobreescribe lo existente.
+ * <p>Reconcilia plan por plan, no todo o nada. La version anterior se saltaba
+ * la carga entera si ya habia cualquier plan en la base, y eso dejo produccion
+ * con el catalogo del segmento anterior (Free, Plus, Pro) mientras la pagina de
+ * precios anunciaba Starter, Business y Enterprise: dos verdades distintas para
+ * el mismo producto. Ahora se crea el que falte por nombre y se retira del
+ * catalogo el que ya no corresponde.
+ *
+ * <p>Retirar es marcar {@code active = false}, nunca borrar. Hay suscripciones
+ * vivas apuntando a los planes antiguos y su fila tiene que seguir existiendo
+ * para que esos clientes puedan leer su propia suscripcion; lo que no debe
+ * seguir es aparecer en el catalogo que se ofrece al contratar.
  *
  * <p>El limite de dispositivos vive como caracteristica del plan
  * ({@code LINKED_DEVICES_LIMIT}) y no en el codigo: asi se puede cambiar sin
@@ -38,30 +48,57 @@ public class PlanSeeder implements ApplicationRunner {
     @Value("${stripe.price.pro:}")
     private String stripePricePro;
 
+    /** Los unicos nombres que el catalogo debe ofrecer. */
+    private static final List<String> CATALOGO = List.of("Starter", "Business", "Enterprise");
+
     @Override
     public void run(ApplicationArguments args) {
-        if (plans.count() > 0) {
+        crearSiFalta("Starter", this::starter);
+        crearSiFalta("Business", this::business);
+        crearSiFalta("Enterprise", this::enterprise);
+        retirarLosQueYaNoVan();
+    }
+
+    private void crearSiFalta(String nombre, Supplier<SubscriptionPlan> constructor) {
+        if (plans.findByName(nombre).isPresent()) {
             return;
         }
-        log.info("No hay planes registrados; cargando los tres por defecto");
+        log.info("Falta el plan {}; se carga", nombre);
+        plans.save(constructor.get());
+    }
 
-        // Los planes se miden en LOCALES, no en dispositivos.
-        //
-        // En el segmento anterior el limite de dispositivos tenia sentido: una
-        // vivienda tiene unos pocos. Un supermercado tiene decenas de medidores
-        // en un solo local, asi que un tope de tres o diez no separa a un
-        // cliente pequeno de una cadena; solo estorba. Lo que de verdad escala
-        // con el tamano del cliente es cuantos locales gestiona.
-        plans.save(withFeatures(
+    private void retirarLosQueYaNoVan() {
+        for (SubscriptionPlan plan : plans.findAllActive()) {
+            if (CATALOGO.contains(plan.getName())) {
+                continue;
+            }
+            log.info("El plan {} ya no esta en el catalogo; se retira sin borrarlo", plan.getName());
+            plans.save(new SubscriptionPlan(plan.getPlanId(), plan.getName(), plan.getDescription(),
+                    plan.getPrice(), plan.getCurrency(), plan.getBillingPeriod(), false,
+                    plan.getCreatedAt(), plan.getPlanFeatures()));
+        }
+    }
+
+    // Los planes se miden en LOCALES, no en dispositivos.
+    //
+    // En el segmento anterior el limite de dispositivos tenia sentido: una
+    // vivienda tiene unos pocos. Un supermercado tiene decenas de medidores
+    // en un solo local, asi que un tope de tres o diez no separa a un
+    // cliente pequeno de una cadena; solo estorba. Lo que de verdad escala
+    // con el tamano del cliente es cuantos locales gestiona.
+    private SubscriptionPlan starter() {
+        return withFeatures(
                 SubscriptionPlan.create("Starter",
                         "One site, with the essentials to start measuring", 0, "PEN", "monthly"),
                 stripePriceFree,
                 feature("BASIC_DASHBOARD", "Site consumption dashboard", "enabled"),
                 feature("CONSUMPTION_ALERTS", "Consumption alerts", "enabled"),
                 feature("SITES_LIMIT", "Sites included", "1"),
-                feature("DEVICES_PER_SITE_LIMIT", "Meters per site", "10")));
+                feature("DEVICES_PER_SITE_LIMIT", "Meters per site", "10"));
+    }
 
-        plans.save(withFeatures(
+    private SubscriptionPlan business() {
+        return withFeatures(
                 SubscriptionPlan.create("Business",
                         "For small chains, with demand control", 149, "PEN", "monthly"),
                 stripePricePlus,
@@ -73,9 +110,11 @@ public class PlanSeeder implements ApplicationRunner {
                 // evitar un solo pico al mes ya paga la diferencia.
                 feature("DEMAND_ALERTS",
                         "Demand warning before exceeding the contracted power", "enabled"),
-                feature("PEAK_HOUR_REPORTS", "Peak-hour consumption reports", "enabled")));
+                feature("PEAK_HOUR_REPORTS", "Peak-hour consumption reports", "enabled"));
+    }
 
-        plans.save(withFeatures(
+    private SubscriptionPlan enterprise() {
+        return withFeatures(
                 SubscriptionPlan.create("Enterprise",
                         "Large chains, with site-to-site benchmarking", 399, "PEN", "monthly"),
                 stripePricePro,
@@ -84,7 +123,7 @@ public class PlanSeeder implements ApplicationRunner {
                 feature("DEVICES_PER_SITE_LIMIT", "Meters per site", "unlimited"),
                 feature("SITE_BENCHMARKING", "Performance benchmarking across sites", "enabled"),
                 feature("TARIFF_OPTIMIZATION", "Tariff category analysis", "enabled"),
-                feature("PRIORITY_SUPPORT", "Priority support", "enabled")));
+                feature("PRIORITY_SUPPORT", "Priority support", "enabled"));
     }
 
     /** Adjunta las caracteristicas al plan y, si existe, el precio de Stripe. */

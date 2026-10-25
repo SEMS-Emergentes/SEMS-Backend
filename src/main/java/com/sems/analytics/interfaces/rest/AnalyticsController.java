@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,12 +31,14 @@ public class AnalyticsController {
     // -------------------------------------------------------- bill-predictions
 
     @Operation(summary = "A user's bill forecasts")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/bill-predictions/user/{userId}")
     public List<BillPredictionResponse> predictions(@PathVariable String userId) {
         return service.predictionsByUser(userId).stream().map(BillPredictionResponse::from).toList();
     }
 
     @Operation(summary = "Records a bill forecast")
+    @PreAuthorize("@accesoUsuario.esMio(#r.userId())")
     @PostMapping("/bill-predictions")
     public ResponseEntity<BillPredictionResponse> createPrediction(
             @Valid @RequestBody CreatePredictionRequest r) {
@@ -46,6 +49,7 @@ public class AnalyticsController {
     }
 
     @Operation(summary = "Forecasts a site's bill using the commercial tariff")
+    @PreAuthorize("@accesoUsuario.esMio(#r.userId())")
     @PostMapping("/bill-predictions/forecast")
     public ResponseEntity<BillPredictionResponse> forecastSiteBill(
             @Valid @RequestBody ForecastSiteBillRequest r) {
@@ -59,6 +63,7 @@ public class AnalyticsController {
     // ---------------------------------------------------------- recommendations
 
     @Operation(summary = "A user's saving recommendations")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/recommendations/user/{userId}")
     public List<RecommendationResponse> recommendations(@PathVariable String userId) {
         return service.recommendationsByUser(userId).stream()
@@ -66,6 +71,7 @@ public class AnalyticsController {
     }
 
     @Operation(summary = "Records a recommendation")
+    @PreAuthorize("@accesoUsuario.esMio(#r.userId())")
     @PostMapping("/recommendations")
     public ResponseEntity<RecommendationResponse> createRecommendation(
             @Valid @RequestBody CreateRecommendationRequest r) {
@@ -76,6 +82,7 @@ public class AnalyticsController {
     }
 
     @Operation(summary = "Marks a recommendation as applied")
+    @PreAuthorize("@accesoAnalitica.recomendacion(#recommendationId)")
     @PatchMapping("/recommendations/{recommendationId}/apply")
     public RecommendationResponse applyRecommendation(@PathVariable UUID recommendationId) {
         return RecommendationResponse.from(service.applyRecommendation(recommendationId));
@@ -84,12 +91,14 @@ public class AnalyticsController {
     // ---------------------------------------------------------------- anomalies
 
     @Operation(summary = "Anomalies detected for a user")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/anomalies/user/{userId}")
     public List<AnomalyResponse> anomalies(@PathVariable String userId) {
         return service.anomaliesByUser(userId).stream().map(AnomalyResponse::from).toList();
     }
 
     @Operation(summary = "Records an anomaly")
+    @PreAuthorize("@accesoUsuario.esMio(#r.userId())")
     @PostMapping("/anomalies")
     public ResponseEntity<AnomalyResponse> createAnomaly(@Valid @RequestBody CreateAnomalyRequest r) {
         var created = service.createAnomaly(r.userId(), r.deviceId(), r.anomalyType(),
@@ -98,6 +107,7 @@ public class AnalyticsController {
     }
 
     @Operation(summary = "Marks an anomaly as resolved")
+    @PreAuthorize("@accesoAnalitica.anomalia(#anomalyId)")
     @PatchMapping("/anomalies/{anomalyId}/resolve")
     public AnomalyResponse resolveAnomaly(@PathVariable UUID anomalyId) {
         return AnomalyResponse.from(service.resolveAnomaly(anomalyId));
@@ -106,6 +116,7 @@ public class AnalyticsController {
     // ------------------------------------------------------ device-identifications
 
     @Operation(summary = "Appliance identifications for a user")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/device-identifications/user/{userId}")
     public List<DeviceIdentificationResponse> identifications(@PathVariable String userId) {
         return service.identificationsByUser(userId).stream()
@@ -113,6 +124,7 @@ public class AnalyticsController {
     }
 
     @Operation(summary = "Records an appliance identification")
+    @PreAuthorize("@accesoUsuario.esMio(#r.userId())")
     @PostMapping("/device-identifications")
     public ResponseEntity<DeviceIdentificationResponse> createIdentification(
             @Valid @RequestBody CreateIdentificationRequest r) {
@@ -125,12 +137,14 @@ public class AnalyticsController {
     // ------------------------------------------------------- consumption-rankings
 
     @Operation(summary = "A user's consumption rankings")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/consumption-rankings/user/{userId}")
     public List<ConsumptionRankingResponse> rankings(@PathVariable String userId) {
         return service.rankingsByUser(userId).stream().map(ConsumptionRankingResponse::from).toList();
     }
 
     @Operation(summary = "Records a consumption ranking")
+    @PreAuthorize("@accesoUsuario.esMio(#r.userId())")
     @PostMapping("/consumption-rankings")
     public ResponseEntity<ConsumptionRankingResponse> createRanking(
             @Valid @RequestBody CreateRankingRequest r) {

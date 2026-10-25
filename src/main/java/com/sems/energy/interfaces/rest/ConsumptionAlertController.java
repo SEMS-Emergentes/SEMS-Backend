@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,30 +22,35 @@ public class ConsumptionAlertController {
     private final EnergyQueryService queries;
 
     @Operation(summary = "Alerts for a user")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/user/{userId}")
     public List<AlertResponse> byUser(@PathVariable String userId) {
         return queries.alertsByUser(userId).stream().map(AlertResponse::from).toList();
     }
 
     @Operation(summary = "Unread alerts for a user")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/user/{userId}/unread")
     public List<AlertResponse> unreadByUser(@PathVariable String userId) {
         return queries.unreadAlertsByUser(userId).stream().map(AlertResponse::from).toList();
     }
 
     @Operation(summary = "Gets an alert by its identifier")
+    @PreAuthorize("@accesoEnergia.alertaDeConsumo(#alertId)")
     @GetMapping("/{alertId}")
     public AlertResponse byId(@PathVariable UUID alertId) {
         return AlertResponse.from(queries.alertById(alertId));
     }
 
     @Operation(summary = "Marks an alert as read")
+    @PreAuthorize("@accesoEnergia.alertaDeConsumo(#alertId)")
     @PatchMapping("/{alertId}/read")
     public AlertResponse markRead(@PathVariable UUID alertId) {
         return AlertResponse.from(commands.markAlertRead(alertId));
     }
 
     @Operation(summary = "Marks an alert as resolved")
+    @PreAuthorize("@accesoEnergia.alertaDeConsumo(#alertId)")
     @PatchMapping("/{alertId}/resolve")
     public AlertResponse resolve(@PathVariable UUID alertId) {
         return AlertResponse.from(commands.resolveAlert(alertId));

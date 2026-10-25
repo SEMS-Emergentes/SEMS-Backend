@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,7 @@ public class PaymentMethodController {
     private final PaymentQueryService queries;
 
     @Operation(summary = "Saves a payment method")
+    @PreAuthorize("@accesoUsuario.esMio(#request.userId())")
     @PostMapping
     public ResponseEntity<PaymentMethodResponse> register(
             @Valid @RequestBody RegisterPaymentMethodRequest request) {
@@ -33,18 +35,21 @@ public class PaymentMethodController {
     }
 
     @Operation(summary = "A user's payment methods")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/user/{userId}")
     public List<PaymentMethodResponse> byUser(@PathVariable UUID userId) {
         return queries.methodsByUser(userId).stream().map(PaymentMethodResponse::from).toList();
     }
 
     @Operation(summary = "Marks a payment method as the default one")
+    @PreAuthorize("@accesoPagos.metodoDePago(#paymentMethodId)")
     @PutMapping("/{paymentMethodId}/default")
     public PaymentMethodResponse setDefault(@PathVariable UUID paymentMethodId) {
         return PaymentMethodResponse.from(commands.setDefault(paymentMethodId));
     }
 
     @Operation(summary = "Deletes a payment method")
+    @PreAuthorize("@accesoPagos.metodoDePago(#paymentMethodId)")
     @DeleteMapping("/{paymentMethodId}")
     public ResponseEntity<Void> delete(@PathVariable UUID paymentMethodId) {
         commands.delete(paymentMethodId);

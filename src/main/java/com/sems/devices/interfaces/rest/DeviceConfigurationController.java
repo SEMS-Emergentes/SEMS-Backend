@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,7 @@ public class DeviceConfigurationController {
     private final DeviceQueryService queries;
 
     @Operation(summary = "Creates or updates a device setting")
+    @PreAuthorize("@accesoDispositivos.dispositivo(#deviceId)")
     @PostMapping("/devices/{deviceId}/configurations")
     public ResponseEntity<DeviceConfigurationResource> upsert(
             @PathVariable UUID deviceId,
@@ -34,6 +36,7 @@ public class DeviceConfigurationController {
     }
 
     @Operation(summary = "Lists the settings of a device")
+    @PreAuthorize("@accesoDispositivos.dispositivo(#deviceId)")
     @GetMapping("/devices/{deviceId}/configurations")
     public List<DeviceConfigurationResource> byDevice(@PathVariable UUID deviceId) {
         return queries.configurationsByDevice(deviceId).stream()
@@ -41,6 +44,7 @@ public class DeviceConfigurationController {
     }
 
     @Operation(summary = "Updates the value of a setting")
+    @PreAuthorize("@accesoDispositivos.configuracion(#configurationId)")
     @PutMapping("/configurations/{configurationId}")
     public DeviceConfigurationResource update(@PathVariable UUID configurationId,
                                               @RequestBody UpdateConfigurationRequest request) {
