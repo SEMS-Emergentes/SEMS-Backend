@@ -27,9 +27,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class NotificationService {
 
-    /** Los envios que no nacen de una alerta se registran con este identificador. */
-    private static final UUID NO_ALERT = new UUID(0L, 0L);
-
     private final EmailSender emailSender;
     private final NotificationLogRepository logs;
 
@@ -37,7 +34,13 @@ public class NotificationService {
             backoff = @Backoff(delay = 2000, multiplier = 2))
     public void sendEmail(UUID alertId, String recipient, String subject, String body) {
         emailSender.send(recipient, subject, body);
-        logs.save(NotificationLog.sent(alertId == null ? NO_ALERT : alertId, "email", recipient));
+        // El identificador de alerta viaja tal cual, nulo incluido: la bienvenida,
+        // la verificacion y la recuperacion de contrasena no nacen de ninguna
+        // alerta. Antes se guardaba un UUID de ceros en su lugar, que apuntaba a
+        // una alerta inexistente y convertia cada registro de usuario en una fila
+        // huerfana. La columna acepta nulos, que es lo que significa de verdad
+        // "este aviso no viene de una alerta".
+        logs.save(NotificationLog.sent(alertId, "email", recipient));
     }
 
     @Recover
@@ -45,7 +48,6 @@ public class NotificationService {
                                        String subject, String body) {
         log.error("No se pudo enviar el correo a {} tras 3 intentos: {}",
                 recipient, failure.getMessage());
-        logs.save(NotificationLog.failed(alertId == null ? NO_ALERT : alertId, "email",
-                recipient, failure.getMessage()));
+        logs.save(NotificationLog.failed(alertId, "email", recipient, failure.getMessage()));
     }
 }
