@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,7 @@ public class EnergyMeterController {
     private final EnergyQueryService queries;
 
     @Operation(summary = "Registers a new meter")
+    @PreAuthorize("@accesoUsuario.esMio(#request.userId())")
     @PostMapping
     public ResponseEntity<MeterResponse> register(@Valid @RequestBody RegisterMeterRequest request) {
         var meter = commands.registerMeter(request.userId(), request.meterSerial(), request.model(),
@@ -32,12 +34,14 @@ public class EnergyMeterController {
     }
 
     @Operation(summary = "Lists a user's meters")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/user/{userId}")
     public List<MeterResponse> byUser(@PathVariable String userId) {
         return queries.metersByUser(userId).stream().map(MeterResponse::from).toList();
     }
 
     @Operation(summary = "Unlinks a meter from its account")
+    @PreAuthorize("@accesoEnergia.medidor(#meterId)")
     @DeleteMapping("/{meterId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void unlink(@PathVariable UUID meterId) {
@@ -45,12 +49,14 @@ public class EnergyMeterController {
     }
 
     @Operation(summary = "Deactivates a meter")
+    @PreAuthorize("@accesoEnergia.medidor(#meterId)")
     @PatchMapping("/{meterId}/deactivate")
     public MeterResponse deactivate(@PathVariable UUID meterId) {
         return MeterResponse.from(commands.deactivateMeter(meterId));
     }
 
     @Operation(summary = "Gets a meter by its identifier")
+    @PreAuthorize("@accesoEnergia.medidor(#meterId)")
     @GetMapping("/{meterId}")
     public MeterResponse byId(@PathVariable UUID meterId) {
         return MeterResponse.from(queries.meterById(meterId));

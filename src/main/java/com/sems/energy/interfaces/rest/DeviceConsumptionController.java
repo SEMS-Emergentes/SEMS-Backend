@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,12 +20,14 @@ public class DeviceConsumptionController {
     private final EnergyQueryService queries;
 
     @Operation(summary = "A user's consumption summaries")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/user/{userId}")
     public List<ConsumptionResponse> byUser(@PathVariable String userId) {
         return queries.consumptionsByUser(userId).stream().map(ConsumptionResponse::from).toList();
     }
 
     @Operation(summary = "A user's highest-consuming devices")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/user/{userId}/top")
     public List<ConsumptionResponse> topByUser(@PathVariable String userId,
                                                @RequestParam(defaultValue = "10") int limit) {
@@ -33,6 +36,7 @@ public class DeviceConsumptionController {
     }
 
     @Operation(summary = "Gets a summary by its identifier")
+    @PreAuthorize("@accesoEnergia.consumo(#consumptionId)")
     @GetMapping("/{consumptionId}")
     public ConsumptionResponse byId(@PathVariable UUID consumptionId) {
         return ConsumptionResponse.from(queries.consumptionById(consumptionId));

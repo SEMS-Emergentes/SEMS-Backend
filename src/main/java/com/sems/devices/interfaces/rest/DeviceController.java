@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,7 @@ public class DeviceController {
     private final DeviceQueryService queries;
 
     @Operation(summary = "Registers a new device")
+    @PreAuthorize("@accesoUsuario.esMio(#request.userId())")
     @PostMapping("/devices")
     public ResponseEntity<DeviceResource> create(@Valid @RequestBody CreateDeviceRequest request) {
         var device = commands.register(
@@ -41,24 +43,28 @@ public class DeviceController {
     }
 
     @Operation(summary = "Lists every device")
+    @PreAuthorize("@accesoUsuario.esAdministrador()")
     @GetMapping("/devices")
     public List<DeviceResource> list() {
         return queries.allDevices().stream().map(DeviceResource::from).toList();
     }
 
     @Operation(summary = "Gets a device by its identifier")
+    @PreAuthorize("@accesoDispositivos.dispositivo(#deviceId)")
     @GetMapping("/devices/{deviceId}")
     public DeviceResource byId(@PathVariable UUID deviceId) {
         return DeviceResource.from(queries.deviceById(deviceId));
     }
 
     @Operation(summary = "Lists a user's devices")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/users/{userId}/devices")
     public List<DeviceResource> byUser(@PathVariable UUID userId) {
         return queries.devicesByUser(userId).stream().map(DeviceResource::from).toList();
     }
 
     @Operation(summary = "Updates the editable details of a device")
+    @PreAuthorize("@accesoDispositivos.dispositivo(#deviceId)")
     @PutMapping("/devices/{deviceId}")
     public DeviceResource update(@PathVariable UUID deviceId,
                                  @Valid @RequestBody UpdateDeviceRequest request) {
@@ -68,12 +74,14 @@ public class DeviceController {
     }
 
     @Operation(summary = "Devices installed at a site")
+    @PreAuthorize("@accesoOrganizaciones.local(#siteId)")
     @GetMapping("/sites/{siteId}/devices")
     public List<DeviceResource> bySite(@PathVariable UUID siteId) {
         return queries.devicesBySite(siteId).stream().map(DeviceResource::from).toList();
     }
 
     @Operation(summary = "Devices in a specific zone")
+    @PreAuthorize("@accesoOrganizaciones.zona(#zoneId)")
     @GetMapping("/zones/{zoneId}/devices")
     public List<DeviceResource> byZone(@PathVariable UUID zoneId) {
         return queries.devicesByZone(zoneId).stream().map(DeviceResource::from).toList();
@@ -85,6 +93,7 @@ public class DeviceController {
     }
 
     @Operation(summary = "Changes the status of a device")
+    @PreAuthorize("@accesoDispositivos.dispositivo(#deviceId)")
     @PatchMapping("/devices/{deviceId}/status")
     public DeviceResource changeStatus(@PathVariable UUID deviceId,
                                        @Valid @RequestBody UpdateDeviceStatusRequest request) {
@@ -92,6 +101,7 @@ public class DeviceController {
     }
 
     @Operation(summary = "Deletes a device (soft delete)")
+    @PreAuthorize("@accesoDispositivos.dispositivo(#deviceId)")
     @DeleteMapping("/devices/{deviceId}")
     public ResponseEntity<Void> remove(@PathVariable UUID deviceId) {
         commands.remove(deviceId);

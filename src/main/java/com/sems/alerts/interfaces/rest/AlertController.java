@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,7 @@ public class AlertController {
     // ---------------------------------------------------------------- alertas
 
     @Operation(summary = "Creates an alert")
+    @PreAuthorize("@accesoUsuario.esMio(#r.userId())")
     @PostMapping("/alerts")
     public ResponseEntity<AlertResponse> create(@Valid @RequestBody CreateAlertRequest r) {
         var alert = commands.createAlert(UUID.fromString(r.userId()), UUID.fromString(r.deviceId()),
@@ -39,18 +41,21 @@ public class AlertController {
     }
 
     @Operation(summary = "Lists every alert")
+    @PreAuthorize("@accesoUsuario.esAdministrador()")
     @GetMapping("/alerts")
     public List<AlertResponse> all() {
         return queries.allAlerts().stream().map(AlertResponse::from).toList();
     }
 
     @Operation(summary = "Gets an alert by its identifier")
+    @PreAuthorize("@accesoAlertas.alerta(#id)")
     @GetMapping("/alerts/{id}")
     public AlertResponse byId(@PathVariable UUID id) {
         return AlertResponse.from(queries.alertById(id));
     }
 
     @Operation(summary = "Changes the status of an alert")
+    @PreAuthorize("@accesoAlertas.alerta(#id)")
     @PatchMapping("/alerts/{id}/status")
     public AlertResponse updateStatus(@PathVariable UUID id,
                                       @Valid @RequestBody UpdateAlertStatusRequest r) {
@@ -58,6 +63,7 @@ public class AlertController {
     }
 
     @Operation(summary = "Alerts for a user")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/users/{userId}/alerts")
     public List<AlertResponse> byUser(@PathVariable UUID userId) {
         return queries.alertsByUser(userId).stream().map(AlertResponse::from).toList();
@@ -66,6 +72,7 @@ public class AlertController {
     // --------------------------------------------------------------- umbrales
 
     @Operation(summary = "Creates a consumption threshold")
+    @PreAuthorize("@accesoUsuario.esMio(#r.userId())")
     @PostMapping("/thresholds")
     public ResponseEntity<ThresholdResponse> createThreshold(
             @Valid @RequestBody CreateThresholdRequest r) {
@@ -76,6 +83,7 @@ public class AlertController {
     }
 
     @Operation(summary = "A user's thresholds")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/users/{userId}/thresholds")
     public List<ThresholdResponse> thresholdsByUser(@PathVariable UUID userId) {
         return queries.thresholdsByUser(userId).stream().map(ThresholdResponse::from).toList();
@@ -84,6 +92,7 @@ public class AlertController {
     // ---------------------------------------------------- reglas de inactividad
 
     @Operation(summary = "Creates an inactivity rule")
+    @PreAuthorize("@accesoUsuario.esMio(#r.userId())")
     @PostMapping("/inactivity-rules")
     public ResponseEntity<InactivityRuleResponse> createRule(
             @Valid @RequestBody CreateInactivityRuleRequest r) {
@@ -93,6 +102,7 @@ public class AlertController {
     }
 
     @Operation(summary = "A user's inactivity rules")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/users/{userId}/inactivity-rules")
     public List<InactivityRuleResponse> rulesByUser(@PathVariable UUID userId) {
         return queries.rulesByUser(userId).stream().map(InactivityRuleResponse::from).toList();
@@ -101,6 +111,7 @@ public class AlertController {
     // ---------------------------------------------- preferencias de notificacion
 
     @Operation(summary = "Saves a notification preference")
+    @PreAuthorize("@accesoUsuario.esMio(#r.userId())")
     @PostMapping("/notification-preferences")
     public ResponseEntity<PreferenceResponse> createPreference(
             @Valid @RequestBody CreatePreferenceRequest r) {
@@ -110,6 +121,7 @@ public class AlertController {
     }
 
     @Operation(summary = "A user's notification preferences")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/users/{userId}/notification-preferences")
     public List<PreferenceResponse> preferencesByUser(@PathVariable UUID userId) {
         return queries.preferencesByUser(userId).stream().map(PreferenceResponse::from).toList();
@@ -118,6 +130,7 @@ public class AlertController {
     // ------------------------------------------------------ reglas de demanda
 
     @Operation(summary = "Creates a demand-watch rule for a site")
+    @PreAuthorize("@accesoUsuario.esMio(#request.userId())")
     @PostMapping("/demand-rules")
     public ResponseEntity<DemandRuleResponse> createDemandRule(
             @Valid @RequestBody CreateDemandRuleRequest request) {
@@ -128,12 +141,14 @@ public class AlertController {
     }
 
     @Operation(summary = "Active demand rules for a site")
+    @PreAuthorize("@accesoOrganizaciones.local(#siteId)")
     @GetMapping("/sites/{siteId}/demand-rules")
     public List<DemandRuleResponse> demandRulesBySite(@PathVariable UUID siteId) {
         return commands.demandRulesBySite(siteId).stream().map(DemandRuleResponse::from).toList();
     }
 
     @Operation(summary = "Evaluates a measured demand and raises the corresponding alerts")
+    @PreAuthorize("@accesoOrganizaciones.local(#siteId)")
     @PostMapping("/sites/{siteId}/demand-evaluations")
     public List<AlertResponse> evaluateDemand(@PathVariable UUID siteId,
                                               @Valid @RequestBody EvaluateDemandRequest request) {

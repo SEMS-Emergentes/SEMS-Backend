@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,12 +47,14 @@ public class EnergyPricingController {
     }
 
     @Operation(summary = "Current consumption of a device")
+    @PreAuthorize("@accesoEnergia.lecturasDelDispositivo(#deviceId)")
     @GetMapping("/devices/{deviceId}/consumption/current")
     public ReadingResponse currentConsumption(@PathVariable String deviceId) {
         return ReadingResponse.from(queries.latestByDevice(deviceId));
     }
 
     @Operation(summary = "Consumption history of a device")
+    @PreAuthorize("@accesoEnergia.lecturasDelDispositivo(#deviceId)")
     @GetMapping("/devices/{deviceId}/consumption/history")
     public List<ReadingResponse> consumptionHistory(@PathVariable String deviceId,
                                                     @RequestParam(defaultValue = "50") int limit,

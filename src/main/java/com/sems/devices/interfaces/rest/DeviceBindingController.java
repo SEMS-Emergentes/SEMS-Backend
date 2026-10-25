@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,7 @@ public class DeviceBindingController {
     private final DeviceQueryService queries;
 
     @Operation(summary = "Links a device to a user")
+    @PreAuthorize("@accesoDispositivos.dispositivo(#deviceId)")
     @PostMapping("/devices/{deviceId}/bindings")
     public ResponseEntity<DeviceBindingResource> bind(@PathVariable UUID deviceId,
                                                       @Valid @RequestBody CreateBindingRequest request) {
@@ -34,18 +36,21 @@ public class DeviceBindingController {
     }
 
     @Operation(summary = "Lists the bindings of a device")
+    @PreAuthorize("@accesoDispositivos.dispositivo(#deviceId)")
     @GetMapping("/devices/{deviceId}/bindings")
     public List<DeviceBindingResource> byDevice(@PathVariable UUID deviceId) {
         return queries.bindingsByDevice(deviceId).stream().map(DeviceBindingResource::from).toList();
     }
 
     @Operation(summary = "Lists the bindings of a user")
+    @PreAuthorize("@accesoUsuario.esMio(#userId)")
     @GetMapping("/users/{userId}/bindings")
     public List<DeviceBindingResource> byUser(@PathVariable UUID userId) {
         return queries.bindingsByUser(userId).stream().map(DeviceBindingResource::from).toList();
     }
 
     @Operation(summary = "Unlinks a device")
+    @PreAuthorize("@accesoDispositivos.enlace(#bindingId)")
     @PatchMapping("/bindings/{bindingId}/unlink")
     public DeviceBindingResource unlink(@PathVariable UUID bindingId) {
         return DeviceBindingResource.from(commands.unbind(bindingId));
