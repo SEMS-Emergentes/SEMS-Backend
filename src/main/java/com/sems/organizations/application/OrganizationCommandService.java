@@ -7,6 +7,7 @@ import com.sems.organizations.domain.model.entities.Zone;
 import com.sems.organizations.domain.model.valueobjects.*;
 import com.sems.organizations.domain.repositories.*;
 import com.sems.shared.errors.AppException;
+import com.sems.subscriptions.interfaces.acl.SubscriptionsAcl;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +25,7 @@ public class OrganizationCommandService {
     private final SiteRepository sites;
     private final ZoneRepository zones;
     private final MembershipRepository memberships;
+    private final SubscriptionsAcl suscripciones;
 
     /**
      * Da de alta una organizacion y deja a quien la crea como administrador.
@@ -73,9 +75,50 @@ public class OrganizationCommandService {
                     "a site with that site_code already exists in this organization");
         }
 
+        comprobarCupoDeLocales(organizationId);
+
         return sites.save(Site.register(organizationId, siteCode, name, address, district,
                 floorAreaM2, contractedPowerKw, TariffCategory.of(tariffCategory),
                 Boolean.TRUE.equals(excludesSundaysFromPeak)));
+    }
+
+    /**
+     * Impide pasarse de los locales que incluye el plan contratado.
+     *
+     * <p>El cupo existia solo como texto en la ficha del plan: nadie lo leia, de
+     * modo que un cliente de Starter podia abrir locales sin limite. Es un hueco
+     * de ingreso, no solo funcional.
+     *
+     * <p>Se mide contra los administradores de la organizacion, que son quienes
+     * pagan. Si varios administran y tienen planes distintos, manda el mas
+     * amplio. Si ninguno tiene suscripcion activa no se aplica cupo: un limite
+     * que no se conoce no se inventa, y bloquear por desconocimiento dejaria sin
+     * poder operar a quien aun no ha contratado.
+     *
+     * <p>Solo cuenta locales vigentes. Un local archivado no ocupa cupo, que es
+     * justo lo que el usuario espera al archivarlo.
+     */
+    private void comprobarCupoDeLocales(UUID organizationId) {
+        Optional<SubscriptionsAcl.SiteAllowance> cupo = memberships.findByOrganizationId(organizationId)
+                .stream()
+                .filter(m -> m.isActive() && m.getRole() == MembershipRole.ORG_ADMIN)
+                .map(m -> suscripciones.siteAllowanceFor(m.getUserId()))
+                .flatMap(Optional::stream)
+                .max((a, b) -> Integer.compare(a.sitesIncluded(), b.sitesIncluded()));
+
+        if (cupo.isEmpty()) {
+            return;
+        }
+
+        long vigentes = sites.findByOrganizationId(organizationId).stream()
+                .filter(Site::isActive)
+                .count();
+
+        if (vigentes >= cupo.get().sitesIncluded()) {
+            throw AppException.conflict("the " + cupo.get().planName() + " plan includes "
+                    + cupo.get().sitesIncluded() + " site(s) and this organization already has "
+                    + vigentes + "; upgrade the plan to add more");
+        }
     }
 
     @Transactional

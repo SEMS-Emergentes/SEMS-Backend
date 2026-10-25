@@ -4,6 +4,7 @@ import com.sems.energy.domain.model.entities.*;
 import com.sems.energy.domain.model.valueobjects.*;
 import com.sems.energy.domain.repositories.*;
 import com.sems.energy.domain.services.EnergyPricingProvider;
+import com.sems.organizations.interfaces.acl.OrganizationsAcl;
 import com.sems.shared.errors.AppException;
 import com.sems.shared.events.DomainEventBus;
 import com.sems.shared.events.DomainEvents;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class EnergyCommandService {
 
     private final EnergyMeterRepository meters;
+    private final OrganizationsAcl organizaciones;
     private final EnergyReadingRepository readings;
     private final ConsumptionAlertRepository alerts;
     private final EnergyPricingProvider pricing;
@@ -32,8 +34,11 @@ public class EnergyCommandService {
      * el medidor fisico es el mismo.
      */
     @Transactional
-    public EnergyMeter registerMeter(String userId, String meterSerial, String model, String brand,
-                                     String location, String firmwareVersion, Double maxPowerWatts) {
+    public EnergyMeter registerMeter(String userId, String siteId, String zoneId,
+                                     String meterSerial, String model, String brand,
+                                     String location, String firmwareVersion,
+                                     Double maxPowerWatts) {
+        comprobarLocalYZona(siteId, zoneId);
         if (meterSerial != null) {
             EnergyMeter existing = meters.findBySerial(meterSerial.trim()).orElse(null);
             if (existing != null && !existing.isUnlinked()) {
@@ -41,11 +46,55 @@ public class EnergyCommandService {
             }
             if (existing != null) {
                 existing.relink(userId);
+                existing.reasignarAZona(zoneId);
                 return meters.save(existing);
             }
         }
-        return meters.save(EnergyMeter.register(userId, meterSerial, model, brand,
+        return meters.save(EnergyMeter.register(userId, siteId, zoneId, meterSerial, model, brand,
                 location, firmwareVersion, maxPowerWatts));
+    }
+
+    /**
+     * Traslada un medidor a otra zona del mismo local.
+     *
+     * <p>Solo de zona: mudar el medidor a otro establecimiento seria otro
+     * suministro, con otra tarifa y otro recibo, y por tanto otro medidor.
+     */
+    @Transactional
+    public EnergyMeter reassignMeterZone(UUID meterId, String zoneId) {
+        EnergyMeter meter = meters.findById(meterId)
+                .orElseThrow(() -> AppException.notFound("Meter '" + meterId + "' not found"));
+        if (meter.getSiteId() == null) {
+            throw AppException.validation(
+                    "this meter predates site assignment; register it again indicating its site");
+        }
+        comprobarLocalYZona(meter.getSiteId(), zoneId);
+        meter.reasignarAZona(zoneId);
+        return meters.save(meter);
+    }
+
+    /**
+     * El local tiene que estar vigente y la zona, si viene, ser de ese local.
+     *
+     * <p>Lo segundo es lo que impide colgar un medidor de la zona de otro
+     * establecimiento: el alta aceptaria cualquier UUID de zona y el consumo
+     * quedaria atribuido a un area que no es la suya, que es precisamente lo que
+     * el cliente paga por saber.
+     */
+    private void comprobarLocalYZona(String siteId, String zoneId) {
+        UUID local = parseUuid(siteId)
+                .orElseThrow(() -> AppException.validation("site_id is not a valid identifier"));
+        if (!organizaciones.siteIsActive(local)) {
+            throw AppException.validation("site '" + siteId + "' does not exist or is not active");
+        }
+        if (zoneId == null || zoneId.isBlank()) {
+            return;
+        }
+        UUID zona = parseUuid(zoneId)
+                .orElseThrow(() -> AppException.validation("zone_id is not a valid identifier"));
+        if (!organizaciones.zoneBelongsToSite(zona, local)) {
+            throw AppException.validation("zone '" + zoneId + "' does not belong to that site");
+        }
     }
 
     /**

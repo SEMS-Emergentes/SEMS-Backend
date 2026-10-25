@@ -30,6 +30,16 @@ public class EnergyQueryService {
         return meters.findByUserId(userId);
     }
 
+    /** Medidores instalados en un local: la cobertura de medicion del local. */
+    public List<EnergyMeter> metersBySite(String siteId) {
+        return meters.findBySiteId(siteId);
+    }
+
+    /** Medidores de una zona concreta del local. */
+    public List<EnergyMeter> metersByZone(String zoneId) {
+        return meters.findByZoneId(zoneId);
+    }
+
     public EnergyReading readingById(UUID readingId) {
         return readings.findById(readingId)
                 .orElseThrow(() -> AppException.notFound("Reading '" + readingId + "' not found"));

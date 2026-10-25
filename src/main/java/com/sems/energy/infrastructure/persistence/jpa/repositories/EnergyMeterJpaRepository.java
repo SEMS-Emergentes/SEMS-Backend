@@ -10,4 +10,8 @@ public interface EnergyMeterJpaRepository extends JpaRepository<EnergyMeterJpaEn
     Optional<EnergyMeterJpaEntity> findByMeterSerial(String meterSerial);
     /** Solo los que siguen vinculados: un medidor desvinculado no es del usuario. */
     List<EnergyMeterJpaEntity> findByUserIdAndUnlinkedAtIsNullOrderByRegisteredAtDesc(String userId);
+
+    List<EnergyMeterJpaEntity> findBySiteIdAndUnlinkedAtIsNullOrderByRegisteredAtDesc(String siteId);
+
+    List<EnergyMeterJpaEntity> findByZoneIdAndUnlinkedAtIsNullOrderByRegisteredAtDesc(String zoneId);
 }

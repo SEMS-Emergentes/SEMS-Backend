@@ -10,6 +10,8 @@ import lombok.*;
 @Table(name = "em_energy_meters",
         indexes = {
                 @Index(name = "idx_em_meters_user", columnList = "user_id"),
+                @Index(name = "idx_em_meters_site", columnList = "site_id"),
+                @Index(name = "idx_em_meters_zone", columnList = "zone_id"),
                 @Index(name = "idx_em_meters_serial", columnList = "meter_serial", unique = true)
         })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
@@ -21,6 +23,24 @@ public class EnergyMeterJpaEntity {
 
     @Column(name = "user_id", nullable = false, length = 80)
     private String userId;
+
+    /**
+     * Local en el que esta instalado el medidor.
+     *
+     * <p>Acepta nulos aunque el alta lo exija, porque las filas anteriores a
+     * esta columna no lo tienen y {@code ddl-auto=update} no puede anadir una
+     * columna obligatoria sobre una tabla con datos. La obligatoriedad vive en
+     * el dominio, donde se puede distinguir un alta nueva de una fila vieja.
+     *
+     * <p>No lleva clave foranea a {@code og_sites} porque cruza modulos, y el
+     * inicializador solo declara claves foraneas dentro de un mismo contexto.
+     */
+    @Column(name = "site_id", length = 80)
+    private String siteId;
+
+    /** Zona del local, opcional: al abrir un local puede que no esten definidas. */
+    @Column(name = "zone_id", length = 80)
+    private String zoneId;
 
     @Column(name = "meter_serial", nullable = false, length = 120)
     private String meterSerial;
