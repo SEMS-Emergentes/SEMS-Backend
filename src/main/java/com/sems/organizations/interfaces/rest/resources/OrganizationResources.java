@@ -7,6 +7,7 @@ import com.sems.organizations.domain.model.aggregates.Organization;
 import com.sems.organizations.domain.model.aggregates.Site;
 import com.sems.organizations.domain.model.entities.Membership;
 import com.sems.organizations.domain.model.entities.Zone;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
@@ -81,8 +82,13 @@ public final class OrganizationResources {
     }
 
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    /**
+     * Se pide el correo y no el identificador: quien administra una
+     * organizacion conoce el correo de sus companeros, no su UUID, y la
+     * alternativa seria abrirle el listado completo de usuarios.
+     */
     public record GrantMembershipRequest(
-            @NotBlank(message = "is required") String userId,
+            @NotBlank(message = "is required") @Email(message = "must be a valid email") String email,
             @NotBlank(message = "is required") String role,
             String siteId) {
     }
@@ -133,12 +139,18 @@ public final class OrganizationResources {
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record MembershipResource(String membershipId, String organizationId, String userId,
-                                     String role, String siteId, String status,
+                                     String email, String role, String siteId, String status,
                                      Instant createdAt) {
 
-        public static MembershipResource from(Membership m) {
+        /**
+         * El correo viaja junto al identificador porque un listado de UUID no le
+         * dice nada a quien administra la organizacion. Puede venir nulo si la
+         * cuenta se borro y el vinculo quedo apuntando a nadie.
+         */
+        public static MembershipResource from(Membership m, String email) {
             return new MembershipResource(m.getMembershipId().toString(),
-                    m.getOrganizationId().toString(), m.getUserId().toString(), m.getRole().name(),
+                    m.getOrganizationId().toString(), m.getUserId().toString(), email,
+                    m.getRole().name(),
                     m.getSiteId() == null ? null : m.getSiteId().toString(), m.getStatus().name(),
                     m.getCreatedAt());
         }
