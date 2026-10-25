@@ -3,6 +3,8 @@ package com.sems.shared.errors;
 import jakarta.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -17,6 +19,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * una regla de negocio rota es 409.
  */
 @Slf4j
+// Primero este. Hay dos @RestControllerAdvice en la aplicacion y el otro
+// termina con un catch-all de Exception. Spring elige el advice entero por
+// orden y se queda con el primero que tenga algun metodo aplicable, asi que un
+// catch-all sin orden declarado se queda con TODO lo que le llegue antes: los
+// 404, 400, 409 y 401 de AppException salian como 500 "Unexpected error" segun
+// como hubiera quedado el orden de beans ese arranque. Declararlo es lo que
+// hace que el resultado no dependa del azar.
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice
 public class SharedExceptionHandler {
 
