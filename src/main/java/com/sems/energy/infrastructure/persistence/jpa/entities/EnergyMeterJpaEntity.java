@@ -52,4 +52,12 @@ public class EnergyMeterJpaEntity {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    /**
+     * Instante en que el medidor dejo de estar vinculado a la cuenta. Nulo
+     * mientras sigue vinculado. Es columna nueva y acepta nulos, asi que
+     * ddl-auto=update la agrega sin tocar las filas existentes.
+     */
+    @Column(name = "unlinked_at")
+    private Instant unlinkedAt;
 }

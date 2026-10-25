@@ -37,6 +37,13 @@ public class EnergyMeterController {
         return queries.metersByUser(userId).stream().map(MeterResponse::from).toList();
     }
 
+    @Operation(summary = "Unlinks a meter from its account")
+    @DeleteMapping("/{meterId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void unlink(@PathVariable UUID meterId) {
+        commands.unlinkMeter(meterId);
+    }
+
     @Operation(summary = "Deactivates a meter")
     @PatchMapping("/{meterId}/deactivate")
     public MeterResponse deactivate(@PathVariable UUID meterId) {

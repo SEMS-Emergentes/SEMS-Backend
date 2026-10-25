@@ -44,7 +44,7 @@ public final class EnergyRepositoryAdapters {
 
         @Override
         public List<EnergyMeter> findByUserId(String userId) {
-            return jpa.findByUserIdOrderByRegisteredAtDesc(userId).stream()
+            return jpa.findByUserIdAndUnlinkedAtIsNullOrderByRegisteredAtDesc(userId).stream()
                     .map(EnergyMapper::toDomain).toList();
         }
     }
