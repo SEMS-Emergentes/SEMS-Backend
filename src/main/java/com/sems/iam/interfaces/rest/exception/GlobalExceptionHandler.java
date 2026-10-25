@@ -7,7 +7,10 @@ import java.time.Instant;
 import java.util.Map;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.http.ResponseEntity;
@@ -99,6 +102,34 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
         return response(HttpStatus.METHOD_NOT_ALLOWED,
                 "Method " + ex.getMethod() + " is not supported for this endpoint");
+    }
+
+    /**
+     * The body could not be read at all: that is a 400.
+     *
+     * <p>Third of the same family, and the one that was still missing. A field
+     * sent with the wrong type, or a payload whose JSON is simply broken, never
+     * reaches validation — Jackson gives up first — so it fell through to the
+     * catch-all and came back as 500 "Unexpected error". Every integration
+     * mistake looked like a server crash, which sends whoever is wiring up a
+     * client to read our logs instead of their payload.
+     *
+     * <p>The reply names the field when Jackson knows it and stops there. The
+     * parser's own message quotes the offending content and the Java types
+     * behind it, and neither belongs in a response.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<?> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        String campo = ex.getCause() instanceof InvalidFormatException formato
+                ? formato.getPath().stream()
+                        .map(JsonMappingException.Reference::getFieldName)
+                        .filter(java.util.Objects::nonNull)
+                        .reduce((a, b) -> b)
+                        .orElse(null)
+                : null;
+        return response(HttpStatus.BAD_REQUEST, campo == null
+                ? "the request body could not be read"
+                : "field '" + campo + "' has the wrong type");
     }
 
     /**
