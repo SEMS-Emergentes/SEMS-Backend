@@ -194,6 +194,24 @@ class AutorizacionPorPropietarioTest {
     }
 
     @Test
+    @DisplayName("un cuerpo que no se puede leer responde 400, no 500")
+    void cuerpoIlegibleEs400() throws Exception {
+        // Un campo con el tipo equivocado ni siquiera llega a la validacion:
+        // Jackson se rinde antes, y eso caia en el catch-all como 500. Quien
+        // integra acababa leyendo nuestros logs en vez de su propio payload.
+        ejecutar(post("/api/v1/energy/bill-estimate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"tariff_category":"MT2","kwh_peak":"mucho","kwh_off_peak":10,
+                         "max_demand_kw":5,"contracted_power_kw":20}"""), tokenDuenio, 400);
+
+        // Y un JSON sintacticamente roto, igual.
+        ejecutar(post("/api/v1/energy/bill-estimate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"tariff_category\":"), tokenDuenio, 400);
+    }
+
+    @Test
     @DisplayName("una ruta que no existe responde 404, no 500")
     void rutaInexistenteEs404() throws Exception {
         ejecutar(get("/api/v1/no-existe-esta-ruta"), tokenDuenio, 404);
