@@ -10,6 +10,7 @@ import com.sems.iam.infrastructure.oauth.google.GoogleTokenVerifier;
 import com.sems.iam.infrastructure.oauth.google.GoogleOAuthClient;
 import com.sems.iam.infrastructure.persistence.jpa.repositories.*;
 import com.sems.iam.interfaces.rest.resources.LoginResponse;
+import com.sems.shared.errors.AppException;
 import java.time.Instant;
 import java.util.*;
 import org.springframework.beans.factory.annotation.Value;
@@ -87,6 +88,13 @@ public class AuthenticationCommandService {
         // Enforce that emails are unique before creating anything.
         if (userRepository.existsByEmailAddress(email.value())) throw new ConflictException("Email already exists");
         RoleName roleName = RoleName.from(command.role());
+        // El segmento se valida aqui: un valor desconocido es un 400 con el
+        // listado de los validos, no una fila con basura dentro.
+        UserSegment segment = parseSegment(command.segment());
+        String fullName = command.fullName() == null ? null : command.fullName().trim();
+        if (fullName != null && fullName.isEmpty()) {
+            fullName = null;
+        }
         // Look up the requested role; orElseThrow turns an empty Optional into a
         // clear NotFoundException instead of a confusing null later on.
         var role = roleRepository.findByName(roleName.name()).orElseThrow(() -> new NotFoundException("Role not found"));
@@ -94,6 +102,8 @@ public class AuthenticationCommandService {
         // password; we store the result of passwordHashingService.hash(...).
         UserJpaEntity user = new UserJpaEntity();
         user.setUserId(UUID.randomUUID()); user.setEmailAddress(email.value()); user.setPasswordHash(passwordHashingService.hash(command.password())); user.setCreatedAt(Instant.now()); user.setUpdatedAt(Instant.now());
+        user.setFullName(fullName);
+        user.setSegment(segment == null ? null : segment.name());
         // La cuenta nace pendiente solo si la verificacion esta activa; si no,
         // queda activa y el alta funciona como antes.
         user.setStatus(requireVerification ? "PENDING" : "ACTIVE");
@@ -117,7 +127,8 @@ public class AuthenticationCommandService {
         }
 
         String refreshToken = authTokens.issueRefreshToken(user.getUserId());
-        return new LoginResponse(token, refreshToken, user.getUserId(), email.value(), List.of(roleName.name()));
+        return new LoginResponse(token, refreshToken, user.getUserId(), email.value(),
+                List.of(roleName.name()), user.getFullName(), user.getSegment());
     }
 
     /**
@@ -153,7 +164,8 @@ public class AuthenticationCommandService {
         String token = tokenService.generateToken(agg);
         eventPublisher.publishUserLoggedIn(user.getUserId().toString(), email.value());
         String refreshToken = authTokens.issueRefreshToken(user.getUserId());
-        return new LoginResponse(token, refreshToken, user.getUserId(), email.value(), roles);
+        return new LoginResponse(token, refreshToken, user.getUserId(), email.value(), roles,
+                user.getFullName(), user.getSegment());
     }
 
     /**
@@ -170,6 +182,9 @@ public class AuthenticationCommandService {
         String audience = String.valueOf(claims.getOrDefault("aud", ""));
         String email = String.valueOf(claims.getOrDefault("email", ""));
         String emailVerified = String.valueOf(claims.getOrDefault("email_verified", "false"));
+        // Google manda el nombre en el propio token; si esta, el usuario no
+        // tiene que volver a escribirlo.
+        String googleName = claims.get("name") == null ? null : String.valueOf(claims.get("name"));
 
         // These four checks are the security gate. Each one closes a hole:
         //  - config must exist; the token must have been issued FOR OUR app
@@ -195,7 +210,8 @@ public class AuthenticationCommandService {
             String token = tokenService.generateToken(agg);
             eventPublisher.publishUserLoggedIn(user.getUserId().toString(), email);
             String refreshToken = authTokens.issueRefreshToken(user.getUserId());
-            return new LoginResponse(token, refreshToken, user.getUserId(), email, roles);
+            return new LoginResponse(token, refreshToken, user.getUserId(), email, roles,
+                    user.getFullName(), user.getSegment());
         }
 
         // Case 2: first time we see this Google email -> create the account now.
@@ -209,6 +225,7 @@ public class AuthenticationCommandService {
         // store a hash of a random value so the column is never empty and the
         // account cannot be used with password login.
         user.setPasswordHash(passwordHashingService.hash(UUID.randomUUID().toString()));
+        user.setFullName(googleName);
         user.setStatus("ACTIVE");
         user.setCreatedAt(Instant.now());
         user.setUpdatedAt(Instant.now());
@@ -232,7 +249,8 @@ public class AuthenticationCommandService {
         eventPublisher.publishUserLoggedIn(user.getUserId().toString(), email);
         // Google ya verifico el correo, asi que la cuenta nace activa.
         String refreshToken = authTokens.issueRefreshToken(user.getUserId());
-        return new LoginResponse(token, refreshToken, user.getUserId(), email, List.of(defaultRole.name()));
+        return new LoginResponse(token, refreshToken, user.getUserId(), email,
+                List.of(defaultRole.name()), user.getFullName(), user.getSegment());
     }
 
     /**
@@ -247,4 +265,20 @@ public class AuthenticationCommandService {
         if (idToken.isBlank()) throw new UnauthorizedException("Google OAuth token exchange failed");
         return loginWithGoogle(idToken);
     }
+
+    /**
+     * Traduce el segmento que llega del cliente.
+     *
+     * <p>IllegalArgumentException sale como 401 en este modulo, y para un valor
+     * mal escrito eso desorienta: manda a revisar la sesion cuando lo que hay
+     * que revisar es el campo. Aqui es un 400 con los valores validos.
+     */
+    private UserSegment parseSegment(String valor) {
+        try {
+            return UserSegment.from(valor);
+        } catch (IllegalArgumentException invalido) {
+            throw AppException.validation(invalido.getMessage());
+        }
+    }
+
 }

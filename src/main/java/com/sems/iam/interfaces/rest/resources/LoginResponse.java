@@ -11,5 +11,6 @@ import java.util.UUID;
  * ambos limita el danio si el de acceso se filtra.
  */
 public record LoginResponse(String token, String refreshToken, UUID userId,
-                            String emailAddress, List<String> roles) {
+                            String emailAddress, List<String> roles,
+                            String fullName, String segment) {
 }
