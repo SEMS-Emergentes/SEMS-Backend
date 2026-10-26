@@ -49,6 +49,16 @@ public class UserJpaEntity {
     @Column(name = "status", length = 20)
     private String status;
 
+    // Nombre para mostrar y segmento comercial. Son del perfil, no de la
+    // identidad, pero viven aqui porque pertenecen a la persona y no a ninguna
+    // organizacion: quien no tiene organizacion todavia tambien tiene nombre.
+    // Nullable porque son opcionales y porque las filas anteriores no los traen.
+    @Column(name = "full_name", length = 120)
+    private String fullName;
+
+    @Column(name = "segment", length = 30)
+    private String segment;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
