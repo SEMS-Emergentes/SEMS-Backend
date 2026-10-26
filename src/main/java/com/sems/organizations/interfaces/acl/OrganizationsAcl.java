@@ -35,4 +35,14 @@ public interface OrganizationsAcl {
 
     /** Numero de locales vigentes de la organizacion. */
     long activeSiteCount(UUID organizationId);
+
+    /**
+     * Si la persona es la unica administradora de alguna organizacion vigente.
+     *
+     * <p>La usa IAM antes de dar de baja una cuenta. Cerrar la cuenta del unico
+     * administrador dejaria la organizacion sin nadie que pueda gestionarla: ni
+     * dar de alta un local, ni invitar a un companero, ni darla de baja. Quedaria
+     * viva y fuera de alcance para siempre.
+     */
+    boolean esUnicoAdministradorDeAlgunaOrganizacion(UUID userId);
 }

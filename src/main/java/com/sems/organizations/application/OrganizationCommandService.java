@@ -121,6 +121,48 @@ public class OrganizationCommandService {
         }
     }
 
+    /**
+     * Da de baja la organizacion entera.
+     *
+     * <p>Archivar, no borrar, igual que un local: las lecturas, los recibos y
+     * los pagos que la referencian tienen que seguir existiendo, y la operacion
+     * es reversible porque {@code Organization} ya sabia reactivarse.
+     *
+     * <p>Arrastra locales y zonas. Dejar locales vigentes colgando de una
+     * organizacion archivada seria peor que no archivar nada: seguirian
+     * contando para el cupo del plan y apareciendo en los listados por local,
+     * sin una organizacion viva de la que dependan.
+     *
+     * <p>Las membresias se conservan. Quien administraba sigue pudiendo ver lo
+     * que archivo y volver a activarlo; revocarlas dejaria la organizacion
+     * fuera del alcance de todos, que es justo el estado que esto viene a
+     * evitar.
+     */
+    @Transactional
+    public void archiveOrganization(UUID organizationId) {
+        Organization organizacion = requireOrganization(organizationId);
+        if (!organizacion.isActive()) {
+            return;
+        }
+
+        for (Site local : sites.findByOrganizationId(organizationId)) {
+            if (!local.isActive()) {
+                continue;
+            }
+            for (Zone zona : zones.findBySiteId(local.getSiteId())) {
+                if (zona.isActive()) {
+                    zona.archive();
+                    zones.save(zona);
+                }
+            }
+            local.archive();
+            sites.save(local);
+        }
+
+        organizacion.archive();
+        organizations.save(organizacion);
+    }
+
     @Transactional
     public Site updateSite(UUID siteId, String name, String address, String district,
                            BigDecimal floorAreaM2, BigDecimal contractedPowerKw,
