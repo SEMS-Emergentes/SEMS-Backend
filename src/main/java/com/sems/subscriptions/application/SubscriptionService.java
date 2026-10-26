@@ -54,6 +54,19 @@ public class SubscriptionService {
     public Subscription create(String userId, UUID planId, String stripeSubscriptionId) {
         // El plan debe existir antes de cobrar nada.
         planById(planId);
+
+        // Una suscripcion activa por usuario. Antes se podian acumular, y con
+        // dos planes vivos a la vez ya no habia respuesta a "en que plan esta
+        // este cliente": el cupo de locales tomaba el mas amplio y la
+        // facturacion podia cobrar los dos. Para cambiar de plan esta
+        // changePlan, que es la operacion que el cliente quiere de verdad.
+        boolean yaTieneUna = subscriptions.findByUserId(userId).stream()
+                .anyMatch(s -> s.getStatus() == SubscriptionStatus.ACTIVE);
+        if (yaTieneUna) {
+            throw AppException.conflict(
+                    "this user already has an active subscription; change its plan instead");
+        }
+
         Subscription saved = subscriptions.save(
                 Subscription.start(userId, planId, stripeSubscriptionId));
         publishChange(saved);
