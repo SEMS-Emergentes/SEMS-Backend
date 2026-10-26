@@ -27,8 +27,14 @@ public final class AnalyticsResources {
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public record CreatePredictionRequest(
             @NotBlank(message = "is required") String userId,
-            int predictionYear, int predictionMonth,
-            Instant periodStart, Instant periodEnd,
+            // Las mismas cotas que ya exigia su hermano forecast. Que dos
+            // endpoints vecinos discreparan sobre el mismo campo dejaba entrar
+            // predicciones del mes 0 por una puerta y no por la otra.
+            @Min(value = 2000, message = "must be a four-digit year") int predictionYear,
+            @Min(value = 1, message = "must be between 1 and 12")
+            @Max(value = 12, message = "must be between 1 and 12") int predictionMonth,
+            @NotNull(message = "is required") Instant periodStart,
+            @NotNull(message = "is required") Instant periodEnd,
             double estimatedKwh, double estimatedAmount,
             String currency, double tariffUsed, double errorMarginPercentage) {
     }
