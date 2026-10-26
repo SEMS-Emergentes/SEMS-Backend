@@ -8,6 +8,7 @@ import com.sems.alerts.domain.model.valueobjects.DemandLevel;
 import com.sems.shared.errors.AppException;
 import com.sems.shared.events.DomainEventBus;
 import com.sems.shared.events.DomainEvents;
+import com.sems.organizations.interfaces.acl.OrganizationsAcl;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,16 +26,38 @@ public class AlertCommandService {
     private final ThresholdRepository thresholds;
     private final InactivityRuleRepository rules;
     private final DemandRuleRepository demandRules;
+    private final OrganizationsAcl organizaciones;
     private final NotificationPreferenceRepository preferences;
     private final DomainEventBus bus;
 
     // ------------------------------------------------------ reglas de demanda
 
     @Transactional
+    /**
+     * Crea un aviso de demanda para un local.
+     *
+     * <p>La potencia contratada la pone el local, no quien crea la regla. Antes
+     * la regla guardaba su propia copia y nadie comprobaba que coincidieran: se
+     * podia pedir un aviso de 999 kW sobre un local contratado a 110, con lo
+     * que el aviso nunca saltaba. Y si la potencia se renegociaba, la regla
+     * seguia con el numero viejo.
+     *
+     * <p>Si quien llama manda un valor distinto al del local se rechaza en vez
+     * de ignorarlo: aceptarlo en silencio le haria creer que configuro algo.
+     */
     public DemandRule createDemandRule(UUID siteId, UUID userId, String ruleName,
-                                       double contractedPowerKw, Double warningPercent,
+                                       Double contractedPowerKw, Double warningPercent,
                                        Boolean active) {
-        return demandRules.save(DemandRule.create(siteId, userId, ruleName, contractedPowerKw,
+        double potenciaDelLocal = organizaciones.contractedPowerOf(siteId)
+                .map(java.math.BigDecimal::doubleValue)
+                .orElseThrow(() -> AppException.conflict("the site is not active"));
+
+        if (contractedPowerKw != null && Math.abs(contractedPowerKw - potenciaDelLocal) > 0.001) {
+            throw AppException.validation("contracted_power_kw must match the site's "
+                    + potenciaDelLocal + " kW, or be omitted: the site owns that figure");
+        }
+
+        return demandRules.save(DemandRule.create(siteId, userId, ruleName, potenciaDelLocal,
                 warningPercent, active));
     }
 
@@ -59,7 +82,17 @@ public class AlertCommandService {
     public List<Alert> evaluateDemand(UUID siteId, double demandaKw) {
         List<Alert> levantadas = new ArrayList<>();
 
+        // La potencia del local manda sobre la que la regla tenga guardada: si
+        // se renegocio el contrato, el aviso se mueve con el sin que nadie
+        // tenga que editar la regla.
+        Double potenciaDelLocal = organizaciones.contractedPowerOf(siteId)
+                .map(java.math.BigDecimal::doubleValue)
+                .orElse(null);
+
         for (DemandRule regla : demandRules.findActiveBySiteId(siteId)) {
+            if (potenciaDelLocal != null) {
+                regla.sincronizarPotenciaContratada(potenciaDelLocal);
+            }
             DemandLevel nivel = regla.evaluar(demandaKw);
             if (nivel == DemandLevel.OK) {
                 continue;
