@@ -7,6 +7,8 @@ import com.sems.organizations.domain.model.entities.Zone;
 import com.sems.organizations.domain.model.valueobjects.*;
 import com.sems.organizations.domain.repositories.*;
 import com.sems.shared.errors.AppException;
+import com.sems.shared.events.DomainEventBus;
+import com.sems.shared.events.DomainEvents;
 import com.sems.subscriptions.interfaces.acl.SubscriptionsAcl;
 import java.math.BigDecimal;
 import java.util.List;
@@ -26,6 +28,7 @@ public class OrganizationCommandService {
     private final ZoneRepository zones;
     private final MembershipRepository memberships;
     private final SubscriptionsAcl suscripciones;
+    private final DomainEventBus bus;
 
     /**
      * Da de alta una organizacion y deja a quien la crea como administrador.
@@ -98,6 +101,13 @@ public class OrganizationCommandService {
      * <p>Solo cuenta locales vigentes. Un local archivado no ocupa cupo, que es
      * justo lo que el usuario espera al archivarlo.
      */
+    /** Un local archivado no admite cambios: la baja es definitiva. */
+    private void exigirVigente(Site local) {
+        if (!local.isActive()) {
+            throw AppException.conflict("the site is not active");
+        }
+    }
+
     private void comprobarCupoDeLocales(UUID organizationId) {
         Optional<SubscriptionsAcl.SiteAllowance> cupo = memberships.findByOrganizationId(organizationId)
                 .stream()
@@ -139,24 +149,16 @@ public class OrganizationCommandService {
      * evitar.
      */
     @Transactional
-    public void archiveOrganization(UUID organizationId) {
+    public void archiveOrganization(UUID organizationId, UUID archivadoPor) {
         Organization organizacion = requireOrganization(organizationId);
         if (!organizacion.isActive()) {
             return;
         }
 
         for (Site local : sites.findByOrganizationId(organizationId)) {
-            if (!local.isActive()) {
-                continue;
+            if (local.isActive()) {
+                archiveSite(local.getSiteId(), archivadoPor);
             }
-            for (Zone zona : zones.findBySiteId(local.getSiteId())) {
-                if (zona.isActive()) {
-                    zona.archive();
-                    zones.save(zona);
-                }
-            }
-            local.archive();
-            sites.save(local);
         }
 
         organizacion.archive();
@@ -168,17 +170,44 @@ public class OrganizationCommandService {
                            BigDecimal floorAreaM2, BigDecimal contractedPowerKw,
                            String tariffCategory, Boolean excludesSundaysFromPeak) {
         Site local = requireSite(siteId);
+        // Un local archivado no se edita. Sin esto se le podia cambiar nombre,
+        // potencia y tarifa despues de darlo de baja: "archivado" no era un
+        // estado final sino una etiqueta, y el resto del modulo ya trataba la
+        // baja como definitiva al no dejar crear zonas dentro.
+        exigirVigente(local);
         local.updateDetails(name, address, district, floorAreaM2, contractedPowerKw,
                 TariffCategory.of(tariffCategory),
                 Boolean.TRUE.equals(excludesSundaysFromPeak));
         return sites.save(local);
     }
 
+    /**
+     * Da de baja un local y lo que cuelga de el.
+     *
+     * <p>Arrastra sus zonas por la misma razon que la baja de organizacion
+     * arrastra sus locales: una zona viva dentro de un local archivado sigue
+     * apareciendo en los listados y admitiendo medidores, colgando de algo que
+     * para el usuario ya no existe.
+     *
+     * <p>De los medidores y los equipos se encargan sus propios modulos al
+     * recibir el evento. Organizaciones no sabe que es un medidor, y no deberia
+     * tener que saberlo para cerrar un local.
+     */
     @Transactional
-    public void archiveSite(UUID siteId) {
+    public void archiveSite(UUID siteId, UUID archivadoPor) {
         Site local = requireSite(siteId);
+        if (!local.isActive()) {
+            return;
+        }
+        for (Zone zona : zones.findBySiteId(siteId)) {
+            if (zona.isActive()) {
+                zona.archive();
+                zones.save(zona);
+            }
+        }
         local.archive();
         sites.save(local);
+        bus.publish(new DomainEvents.SiteArchived(archivadoPor, siteId));
     }
 
     @Transactional
@@ -186,6 +215,17 @@ public class OrganizationCommandService {
         Site local = requireSite(siteId);
         if (!local.isActive()) {
             throw AppException.conflict("the site is not active");
+        }
+        // Dos zonas con el mismo nombre en un local son indistinguibles para
+        // quien las mira, y el desglose por zona las muestra como dos grupos
+        // iguales. El resto de entidades del modulo ya exige un identificador
+        // propio; las zonas se habian quedado fuera.
+        String limpio = name == null ? "" : name.trim();
+        boolean repetida = zones.findBySiteId(siteId).stream()
+                .anyMatch(z -> z.isActive() && z.getName() != null
+                        && z.getName().trim().equalsIgnoreCase(limpio));
+        if (repetida) {
+            throw AppException.conflict("a zone with that name already exists in this site");
         }
         return zones.save(Zone.register(siteId, name, ZoneType.of(zoneType), operatesOffHours));
     }
