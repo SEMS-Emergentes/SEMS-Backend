@@ -6,7 +6,7 @@ import com.sems.devices.domain.model.entities.DeviceConfiguration;
 import com.sems.devices.domain.model.entities.DeviceEvent;
 import com.sems.devices.domain.model.valueobjects.ConnectionProtocol;
 import com.sems.devices.domain.model.valueobjects.DeviceStatus;
-import com.sems.devices.domain.services.SiteDirectory;
+import com.sems.organizations.interfaces.acl.OrganizationsAcl;
 import com.sems.devices.domain.repositories.*;
 import com.sems.shared.errors.AppException;
 import com.sems.shared.events.DomainEventBus;
@@ -32,7 +32,7 @@ public class DeviceCommandService {
     private final DeviceBindingRepository bindings;
     private final DeviceConfigurationRepository configurations;
     private final DeviceEventRepository events;
-    private final SiteDirectory sites;
+    private final OrganizationsAcl sites;
     private final DomainEventBus bus;
 
     @Transactional
@@ -71,8 +71,13 @@ public class DeviceCommandService {
         if (siteId == null) {
             throw AppException.validation("site_id is required");
         }
+        // Mismo criterio que en energia y en organizaciones: no existe es 404,
+        // archivado es 409. Antes esta linea devolvia 404 para ambos casos.
+        if (!sites.siteExists(siteId)) {
+            throw AppException.notFound("site not found");
+        }
         if (!sites.siteIsActive(siteId)) {
-            throw AppException.notFound("site not found or not active");
+            throw AppException.conflict("the site is not active");
         }
         if (zoneId != null && !sites.zoneBelongsToSite(zoneId, siteId)) {
             throw AppException.validation("the zone does not belong to the given site");
@@ -93,6 +98,14 @@ public class DeviceCommandService {
     @Transactional
     public void remove(UUID deviceId) {
         Device device = require(deviceId);
+        // Dar de baja lo ya dado de baja no es un error: el cliente pidio un
+        // estado y ese estado es el que hay. Antes la segunda llamada devolvia
+        // 409 "invalid device status transition", mientras desvincular un
+        // medidor dos veces respondia 204 las dos veces. Dos operaciones
+        // hermanas no deberian responder distinto a lo mismo.
+        if (device.isRemoved()) {
+            return;
+        }
         device.remove();
         devices.save(device);
         bus.publish(new DomainEvents.DeviceStatusUpdated(
