@@ -6,6 +6,7 @@ import com.sems.alerts.domain.model.entities.Alert;
 import com.sems.alerts.domain.model.entities.AlertThreshold;
 import com.sems.alerts.domain.model.entities.InactivityRule;
 import com.sems.alerts.domain.model.entities.NotificationLog;
+import com.sems.alerts.domain.model.valueobjects.AlertStatus;
 import com.sems.alerts.domain.model.valueobjects.Operator;
 import com.sems.shared.errors.AppException;
 import java.time.Instant;
@@ -15,6 +16,55 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class AlertDomainTest {
+
+    @Test
+    @DisplayName("El estado del aviso se normaliza al vocabulario del servidor")
+    void elEstadoSeNormaliza() {
+        // La web manda "open" donde el servidor dice "active". Aceptarlo y
+        // normalizarlo es lo que evita tener dos palabras para lo mismo
+        // guardadas en la base, sin obligar a desplegar ambos lados a la vez.
+        assertEquals("active", AlertStatus.of("open").wire());
+        assertEquals("active", AlertStatus.of("OPEN").wire());
+        assertEquals("active", AlertStatus.of("  Active ").wire());
+        assertEquals("acknowledged", AlertStatus.of("acknowledged").wire());
+        assertEquals("resolved", AlertStatus.of("closed").wire());
+        assertEquals("resolved", AlertStatus.of("dismissed").wire());
+
+        // Sin estado, el aviso nace activo.
+        assertEquals("active", AlertStatus.of(null).wire());
+        assertEquals("active", AlertStatus.of("   ").wire());
+    }
+
+    @Test
+    @DisplayName("Un estado inventado se rechaza en vez de guardarse")
+    void elEstadoInventadoSeRechaza() {
+        // Guardarlo era lo que dejaba el aviso fuera de todos los filtros: no
+        // fallaba nada y el aviso simplemente desaparecia de la pantalla.
+        AppException e = assertThrows(AppException.class, () -> AlertStatus.of("INVENTADO"));
+        assertTrue(e.getMessage().contains("INVENTADO"), e.getMessage());
+
+        Alert aviso = Alert.raise(UUID.randomUUID(), UUID.randomUUID(), null, null,
+                "THRESHOLD", "t", "m", "WARNING", null, null);
+        assertThrows(AppException.class, () -> aviso.updateStatus("cualquier-cosa", null));
+        assertEquals("active", aviso.getStatus(), "el aviso conserva su estado anterior");
+    }
+
+    @Test
+    @DisplayName("Resolver un aviso sella la fecha; los demas estados no")
+    void resolverSellaLaFecha() {
+        Alert aviso = Alert.raise(UUID.randomUUID(), UUID.randomUUID(), null, null,
+                "THRESHOLD", "t", "m", "WARNING", "open", null);
+        assertEquals("active", aviso.getStatus());
+        assertNull(aviso.getResolvedAt());
+
+        aviso.updateStatus("acknowledged", null);
+        assertEquals("acknowledged", aviso.getStatus());
+        assertNull(aviso.getResolvedAt(), "solo resolver sella la fecha");
+
+        aviso.updateStatus("closed", null);
+        assertEquals("resolved", aviso.getStatus());
+        assertNotNull(aviso.getResolvedAt());
+    }
 
     @Test
     @DisplayName("Cada operador compara como corresponde")

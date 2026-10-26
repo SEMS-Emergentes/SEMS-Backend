@@ -1,5 +1,6 @@
 package com.sems.alerts.domain.model.entities;
 
+import com.sems.alerts.domain.model.valueobjects.AlertStatus;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
@@ -8,8 +9,8 @@ import lombok.Getter;
 @Getter
 public class Alert {
 
-    public static final String STATUS_ACTIVE = "active";
-    public static final String STATUS_RESOLVED = "resolved";
+    public static final String STATUS_ACTIVE = AlertStatus.ACTIVE.wire();
+    public static final String STATUS_RESOLVED = AlertStatus.RESOLVED.wire();
 
     private final UUID alertId;
     private final UUID userId;
@@ -45,15 +46,22 @@ public class Alert {
                               String alertType, String title, String message, String severity,
                               String status, Instant triggeredAt) {
         return new Alert(UUID.randomUUID(), userId, deviceId, thresholdId, inactivityRuleId,
-                alertType, title, message, severity,
-                status == null || status.isBlank() ? STATUS_ACTIVE : status,
+                alertType, title, message, severity, AlertStatus.of(status).wire(),
                 triggeredAt == null ? Instant.now() : triggeredAt, null);
     }
 
-    /** Al pasar a resuelta se sella la fecha si el cliente no la envio. */
+    /**
+     * Cambia el estado del aviso. Al pasar a resuelta se sella la fecha si el
+     * cliente no la envio.
+     *
+     * <p>El estado se valida y se normaliza: antes se guardaba lo que llegara,
+     * y una palabra inventada dejaba el aviso fuera de todos los filtros, es
+     * decir invisible, sin que nada diera error.
+     */
     public void updateStatus(String newStatus, Instant resolvedAt) {
-        this.status = newStatus;
-        if (STATUS_RESOLVED.equalsIgnoreCase(newStatus)) {
+        AlertStatus estado = AlertStatus.of(newStatus);
+        this.status = estado.wire();
+        if (estado.esResuelta()) {
             this.resolvedAt = resolvedAt == null ? Instant.now() : resolvedAt;
         } else {
             this.resolvedAt = resolvedAt;
