@@ -7,6 +7,7 @@ import com.sems.organizations.domain.repositories.MembershipRepository;
 import com.sems.organizations.domain.repositories.OrganizationRepository;
 import com.sems.organizations.domain.repositories.SiteRepository;
 import com.sems.organizations.domain.repositories.ZoneRepository;
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,12 @@ public class OrganizationsAclImpl implements OrganizationsAcl {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean siteExists(UUID siteId) {
+        return siteId != null && sites.findById(siteId).isPresent();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public boolean siteIsActive(UUID siteId) {
         return siteId != null && sites.findById(siteId).map(Site::isActive).orElse(false);
     }
@@ -38,6 +45,17 @@ public class OrganizationsAclImpl implements OrganizationsAcl {
         return zones.findById(zoneId)
                 .map(z -> z.isActive() && siteId.equals(z.getSiteId()))
                 .orElse(false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<BigDecimal> contractedPowerOf(UUID siteId) {
+        if (siteId == null) {
+            return Optional.empty();
+        }
+        return sites.findById(siteId)
+                .filter(Site::isActive)
+                .map(Site::getContractedPowerKw);
     }
 
     @Override

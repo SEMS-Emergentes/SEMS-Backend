@@ -9,6 +9,7 @@ import com.sems.shared.errors.AppException;
 import com.sems.shared.events.DomainEventBus;
 import com.sems.shared.events.DomainEvents;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -84,8 +85,16 @@ public class EnergyCommandService {
     private void comprobarLocalYZona(String siteId, String zoneId) {
         UUID local = parseUuid(siteId)
                 .orElseThrow(() -> AppException.validation("site_id is not a valid identifier"));
+        // Dos condiciones distintas, dos respuestas distintas, y las mismas en
+        // todo el sistema: un local que no existe es 404, uno archivado es 409.
+        // Antes esta misma situacion respondia 400 aqui, 404 en dispositivos y
+        // 409 en organizaciones, y quien integraba tenia que aprenderselas una
+        // por una.
+        if (!organizaciones.siteExists(local)) {
+            throw AppException.notFound("site '" + siteId + "' not found");
+        }
         if (!organizaciones.siteIsActive(local)) {
-            throw AppException.validation("site '" + siteId + "' does not exist or is not active");
+            throw AppException.conflict("the site is not active");
         }
         if (zoneId == null || zoneId.isBlank()) {
             return;
@@ -142,6 +151,22 @@ public class EnergyCommandService {
         if (medidor.getUserId() == null || !medidor.getUserId().equalsIgnoreCase(
                 userId == null ? "" : userId.trim())) {
             throw AppException.validation("the meter is not registered to that user");
+        }
+
+        // Una lectura no puede medir energia negativa ni venir del futuro.
+        //
+        // Ambas se aceptaban y envenenaban en silencio todo lo que se calcula
+        // encima: totales, coste del mes, graficos y la estimacion del recibo.
+        // Un kWh negativo llega a restar del gasto; una fecha de 2099 deja la
+        // serie con un pico al final que nunca caduca.
+        if (energyKwh < 0) {
+            throw AppException.validation("energy_kwh cannot be negative");
+        }
+        if (powerWatts < 0) {
+            throw AppException.validation("power_watts cannot be negative");
+        }
+        if (timestamp != null && timestamp.isAfter(Instant.now().plus(Duration.ofMinutes(5)))) {
+            throw AppException.validation("timestamp cannot be in the future");
         }
 
         PowerReading measurement = new PowerReading(powerWatts, voltage, current, frequency, energyKwh);

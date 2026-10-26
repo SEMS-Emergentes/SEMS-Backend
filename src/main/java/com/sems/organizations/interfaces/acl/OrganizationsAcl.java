@@ -1,5 +1,6 @@
 package com.sems.organizations.interfaces.acl;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,11 +25,24 @@ import java.util.UUID;
  */
 public interface OrganizationsAcl {
 
+    /** Si el local existe, este vigente o no. */
+    boolean siteExists(UUID siteId);
+
     /** Si el local existe y esta vigente. */
     boolean siteIsActive(UUID siteId);
 
     /** Si la zona existe, esta vigente y pertenece a ese local. */
     boolean zoneBelongsToSite(UUID zoneId, UUID siteId);
+
+    /**
+     * Potencia contratada del local, o vacio si no existe o no esta vigente.
+     *
+     * <p>La pide alertas para que el aviso de demanda no guarde su propia copia
+     * del dato. El contrato con la distribuidora es del local; tener dos
+     * numeros para la misma potencia significa que uno de los dos esta
+     * desactualizado y nadie se entera.
+     */
+    Optional<BigDecimal> contractedPowerOf(UUID siteId);
 
     /** El local al que pertenece la zona, o vacio si la zona no existe. */
     Optional<UUID> siteOfZone(UUID zoneId);
