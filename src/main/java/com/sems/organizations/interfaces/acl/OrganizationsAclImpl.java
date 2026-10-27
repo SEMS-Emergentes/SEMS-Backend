@@ -7,7 +7,10 @@ import com.sems.organizations.domain.repositories.MembershipRepository;
 import com.sems.organizations.domain.repositories.OrganizationRepository;
 import com.sems.organizations.domain.repositories.SiteRepository;
 import com.sems.organizations.domain.repositories.ZoneRepository;
+import com.sems.organizations.domain.model.entities.Zone;
 import java.math.BigDecimal;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,48 @@ public class OrganizationsAclImpl implements OrganizationsAcl {
     private final ZoneRepository zones;
     private final MembershipRepository memberships;
     private final OrganizationRepository organizations;
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<SiteSummary> siteSummary(UUID siteId) {
+        if (siteId == null) {
+            return Optional.empty();
+        }
+        return sites.findById(siteId).filter(Site::isActive).map(OrganizationsAclImpl::resumen);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SiteSummary> activeSitesOf(UUID organizationId) {
+        if (organizationId == null) {
+            return List.of();
+        }
+        return sites.findByOrganizationId(organizationId).stream()
+                .filter(Site::isActive)
+                .sorted(Comparator.comparing(Site::getCreatedAt))
+                .map(OrganizationsAclImpl::resumen)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ZoneSummary> activeZonesOf(UUID siteId) {
+        if (siteId == null) {
+            return List.of();
+        }
+        return zones.findBySiteId(siteId).stream()
+                .filter(Zone::isActive)
+                .sorted(Comparator.comparing(Zone::getName, String.CASE_INSENSITIVE_ORDER))
+                .map(z -> new ZoneSummary(z.getZoneId(), z.getName(), z.getZoneType().name()))
+                .toList();
+    }
+
+    private static SiteSummary resumen(Site local) {
+        return new SiteSummary(local.getSiteId(), local.getSiteCode(), local.getName(),
+                local.getContractedPowerKw(),
+                local.getTariffCategory() == null ? null : local.getTariffCategory().name(),
+                local.isExcludesSundaysFromPeak());
+    }
 
     @Override
     @Transactional(readOnly = true)

@@ -4,6 +4,7 @@ import com.sems.energy.domain.model.entities.*;
 import com.sems.energy.domain.repositories.*;
 import com.sems.energy.infrastructure.persistence.jpa.repositories.*;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -92,6 +93,17 @@ public final class EnergyRepositoryAdapters {
         @Override
         public List<EnergyReading> findByRange(String userId, Instant from, Instant to) {
             return jpa.findByUserIdAndTimestampBetweenOrderByTimestampAsc(userId, from, to)
+                    .stream().map(EnergyMapper::toDomain).toList();
+        }
+
+        @Override
+        public List<EnergyReading> findByMeters(Collection<String> meterIds, Instant from) {
+            if (meterIds == null || meterIds.isEmpty()) {
+                // Sin medidores no hay nada que buscar, y un IN vacio es una
+                // consulta que algunos motores rechazan.
+                return List.of();
+            }
+            return jpa.findByMeterIdInAndTimestampGreaterThanEqualOrderByTimestampAsc(meterIds, from)
                     .stream().map(EnergyMapper::toDomain).toList();
         }
 
