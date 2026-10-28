@@ -1,6 +1,7 @@
 package com.sems.alerts.infrastructure.persistence.jpa.adapters;
 
 import com.sems.alerts.domain.model.entities.DemandRule;
+import com.sems.alerts.domain.model.valueobjects.DemandLevel;
 import com.sems.alerts.domain.repositories.DemandRuleRepository;
 import com.sems.alerts.infrastructure.persistence.jpa.entities.DemandRuleJpaEntity;
 import com.sems.alerts.infrastructure.persistence.jpa.repositories.DemandRuleJpa;
@@ -41,12 +42,26 @@ public class DemandRuleRepositoryAdapter implements DemandRuleRepository {
     private static DemandRuleJpaEntity toEntity(DemandRule r) {
         return new DemandRuleJpaEntity(r.getDemandRuleId(), r.getSiteId(), r.getUserId(),
                 r.getRuleName(), r.getContractedPowerKw(), r.getWarningPercent(), r.isActive(),
-                r.getCreatedAt(), r.getUpdatedAt());
+                r.getLastAlertLevel() == null ? null : r.getLastAlertLevel().name(),
+                r.getLastAlertAt(), r.getCreatedAt(), r.getUpdatedAt());
     }
 
     private static DemandRule toDomain(DemandRuleJpaEntity e) {
         return DemandRule.rehydrate(e.getDemandRuleId(), e.getSiteId(), e.getUserId(),
                 e.getRuleName(), e.getContractedPowerKw(), e.getWarningPercent(), e.isActive(),
+                nivel(e.getLastAlertLevel()), e.getLastAlertAt(),
                 e.getCreatedAt(), e.getUpdatedAt());
+    }
+
+    /** Un nivel guardado que ya no exista en el enum cuenta como "sin aviso previo". */
+    private static DemandLevel nivel(String guardado) {
+        if (guardado == null || guardado.isBlank()) {
+            return null;
+        }
+        try {
+            return DemandLevel.valueOf(guardado);
+        } catch (IllegalArgumentException desconocido) {
+            return null;
+        }
     }
 }

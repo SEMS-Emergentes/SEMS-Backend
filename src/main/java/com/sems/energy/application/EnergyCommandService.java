@@ -179,7 +179,10 @@ public class EnergyCommandService {
 
         parseUuid(userId).ifPresent(uid -> bus.publish(new DomainEvents.ReadingProcessed(
                 uid, parseUuid(deviceId).orElse(null), parseUuid(meterId).orElse(null),
-                BigDecimal.valueOf(energyKwh), saved.getTimestamp())));
+                parseUuid(medidor.getSiteId()).orElse(null),
+                BigDecimal.valueOf(energyKwh),
+                BigDecimal.valueOf(powerWatts / 1000d),
+                saved.getTimestamp())));
 
         return saved;
     }

@@ -80,7 +80,31 @@ public class AlertCommandService {
      */
     @Transactional
     public List<Alert> evaluateDemand(UUID siteId, double demandaKw) {
+        return evaluateDemand(siteId, demandaKw, false);
+    }
+
+    /**
+     * Evaluacion disparada por una lectura, no por una persona.
+     *
+     * <p>Se diferencia de la manual en que no repite el mismo aviso: con una
+     * lectura cada pocos minutos, avisar en todas durante un pico sostenido
+     * llenaria la bandeja de copias y el aviso dejaria de leerse.
+     */
+    @Transactional
+    public List<Alert> evaluarDemandaAutomatica(UUID siteId, double demandaKw) {
+        return evaluateDemand(siteId, demandaKw, true);
+    }
+
+    private List<Alert> evaluateDemand(UUID siteId, double demandaKw, boolean automatica) {
         List<Alert> levantadas = new ArrayList<>();
+        Instant ahora = Instant.now();
+
+        // La potencia del local manda sobre la que la regla tenga guardada: si
+        // se renegocio el contrato, el aviso se mueve con el sin que nadie
+        // tenga que editar la regla.
+        Double potenciaDelLocal = organizaciones.contractedPowerOf(siteId)
+                .map(java.math.BigDecimal::doubleValue)
+                .orElse(null);
 
         // La potencia del local manda sobre la que la regla tenga guardada: si
         // se renegocio el contrato, el aviso se mueve con el sin que nadie
@@ -94,6 +118,18 @@ public class AlertCommandService {
                 regla.sincronizarPotenciaContratada(potenciaDelLocal);
             }
             DemandLevel nivel = regla.evaluar(demandaKw);
+
+            if (automatica) {
+                boolean avisar = regla.mereceAviso(nivel, ahora);
+                regla.anotarEvaluacion(nivel, ahora);
+                demandRules.save(regla);
+                if (!avisar) {
+                    continue;
+                }
+            } else if (nivel == DemandLevel.OK) {
+                continue;
+            }
+
             if (nivel == DemandLevel.OK) {
                 continue;
             }
@@ -119,7 +155,7 @@ public class AlertCommandService {
             }
 
             levantadas.add(createAlert(regla.getUserId(), null, null, null, "DEMAND", titulo,
-                    mensaje, severidad, null, Instant.now()));
+                    mensaje, severidad, null, ahora));
         }
 
         return levantadas;
