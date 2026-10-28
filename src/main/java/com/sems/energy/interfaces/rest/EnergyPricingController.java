@@ -14,8 +14,12 @@ import org.springframework.web.bind.annotation.*;
 /**
  * Tarifa vigente y consumo por dispositivo.
  *
- * <p>La ruta {@code /api/v1/energy/pricing/current} es la que consulta el
- * frontend para convertir kWh en soles.
+ * <p>El precio de referencia de {@code /pricing/current} es un unico numero
+ * por kWh, heredado del producto domestico. Un suministro comercial no se
+ * factura asi: la energia vale distinto dentro y fuera de la hora punta y
+ * ademas se paga por la potencia contratada. Quien quiera convertir kWh en
+ * soles debe usar la tarifa del local ({@code /energy/tariffs/{categoria}}) o
+ * el coste que ya viene en cada lectura.
  */
 @Tag(name = "Energy Pricing", description = "Electricity tariff and per-device consumption")
 @RestController
@@ -26,7 +30,18 @@ public class EnergyPricingController {
     private final EnergyCommandService commands;
     private final EnergyQueryService queries;
 
-    @Operation(summary = "Current electricity tariff")
+    /**
+     * Precio plano de referencia.
+     *
+     * <p>Se mantiene por compatibilidad, pero no describe lo que paga un local:
+     * usarlo para calcular costes es lo que hacia que la misma pantalla
+     * mostrara dos cifras distintas para el mismo consumo.
+     *
+     * @deprecated usar la tarifa comercial del local.
+     */
+    @Deprecated(since = "2026.10")
+    @Operation(summary = "Current flat reference price (deprecated: use the site tariff)",
+            deprecated = true)
     @GetMapping("/pricing/current")
     public PricingResponse currentPricing() {
         return PricingResponse.from(commands.currentPrice());
