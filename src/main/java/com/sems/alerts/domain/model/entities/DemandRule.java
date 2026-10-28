@@ -2,6 +2,7 @@ package com.sems.alerts.domain.model.entities;
 
 import com.sems.alerts.domain.model.valueobjects.DemandLevel;
 import com.sems.shared.errors.AppException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
@@ -29,11 +30,21 @@ public class DemandRule {
     private double contractedPowerKw;
     private double warningPercent;
     private boolean active;
+    // Ultimo aviso que levanto esta regla. Lo guarda la regla y no el servicio
+    // porque es estado de la propia vigilancia: sin el, una lectura por minuto
+    // generaria un aviso por minuto mientras durase el pico, y una bandeja con
+    // cuarenta avisos identicos no se lee, se ignora.
+    private DemandLevel lastAlertLevel;
+    private Instant lastAlertAt;
     private final Instant createdAt;
     private Instant updatedAt;
 
+    /** Un mismo nivel no se repite antes de este tiempo. */
+    private static final Duration SILENCIO = Duration.ofMinutes(30);
+
     private DemandRule(UUID demandRuleId, UUID siteId, UUID userId, String ruleName,
                        double contractedPowerKw, double warningPercent, boolean active,
+                       DemandLevel lastAlertLevel, Instant lastAlertAt,
                        Instant createdAt, Instant updatedAt) {
         this.demandRuleId = demandRuleId;
         this.siteId = siteId;
@@ -42,6 +53,8 @@ public class DemandRule {
         this.contractedPowerKw = contractedPowerKw;
         this.warningPercent = warningPercent;
         this.active = active;
+        this.lastAlertLevel = lastAlertLevel;
+        this.lastAlertAt = lastAlertAt;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -65,14 +78,15 @@ public class DemandRule {
 
         Instant ahora = Instant.now();
         return new DemandRule(UUID.randomUUID(), siteId, userId, ruleName, contractedPowerKw,
-                aviso, active == null || active, ahora, ahora);
+                aviso, active == null || active, null, null, ahora, ahora);
     }
 
     public static DemandRule rehydrate(UUID demandRuleId, UUID siteId, UUID userId, String ruleName,
                                        double contractedPowerKw, double warningPercent,
-                                       boolean active, Instant createdAt, Instant updatedAt) {
+                                       boolean active, DemandLevel lastAlertLevel,
+                                       Instant lastAlertAt, Instant createdAt, Instant updatedAt) {
         return new DemandRule(demandRuleId, siteId, userId, ruleName, contractedPowerKw,
-                warningPercent, active, createdAt, updatedAt);
+                warningPercent, active, lastAlertLevel, lastAlertAt, createdAt, updatedAt);
     }
 
     /** Demanda a la que se dispara el aviso, en kW. */
@@ -103,6 +117,37 @@ public class DemandRule {
             return DemandLevel.EXCEEDED;
         }
         return demandaKw >= umbralDeAvisoKw() ? DemandLevel.WARNING : DemandLevel.OK;
+    }
+
+    /**
+     * Si una evaluacion automatica debe levantar aviso.
+     *
+     * <p>Avisa cuando la situacion cambia —se entra en aviso, o se pasa de
+     * aviso a exceso— y, si no cambia, como mucho una vez cada media hora. Un
+     * pico sostenido sigue mereciendo recordatorio, pero no uno por lectura.
+     */
+    public boolean mereceAviso(DemandLevel nivel, Instant ahora) {
+        if (nivel == DemandLevel.OK) {
+            return false;
+        }
+        if (nivel != lastAlertLevel || lastAlertAt == null) {
+            return true;
+        }
+        return ahora.isAfter(lastAlertAt.plus(SILENCIO));
+    }
+
+    /** Anota el nivel con el que se evaluo, para no repetir el mismo aviso. */
+    public void anotarEvaluacion(DemandLevel nivel, Instant ahora) {
+        if (nivel == DemandLevel.OK) {
+            // Al volver a la normalidad se olvida el aviso anterior: el
+            // siguiente pico tiene que avisar enseguida, no media hora despues.
+            this.lastAlertLevel = null;
+            this.lastAlertAt = null;
+        } else {
+            this.lastAlertLevel = nivel;
+            this.lastAlertAt = ahora;
+        }
+        this.updatedAt = ahora;
     }
 
     /** Cuantos kW quedan hasta superar lo contratado. Negativo si ya se supero. */

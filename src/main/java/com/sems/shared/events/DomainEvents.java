@@ -130,14 +130,21 @@ public final class DomainEvents {
 
     /**
      * Una lectura del medidor ya validada y almacenada.
-     * La escuchan analytics (para rankings y proyecciones) y alerts (para umbrales).
+     *
+     * <p>La escuchan analytics (para rankings y proyecciones) y alerts, que la
+     * usa para dos cosas: comprobar los umbrales del equipo y vigilar la
+     * demanda del local. Por eso el evento lleva tambien el local y la potencia
+     * instantanea: sin ellos, alerts tendria que preguntarle a energia por el
+     * medidor en cada lectura, que es justo el acoplamiento que el evento evita.
      */
-    public record ReadingProcessed(UUID userId, UUID deviceId, UUID meterId,
-                                   BigDecimal consumptionKwh, Instant recordedAt, Instant occurredAt)
+    public record ReadingProcessed(UUID userId, UUID deviceId, UUID meterId, UUID siteId,
+                                   BigDecimal consumptionKwh, BigDecimal powerKw,
+                                   Instant recordedAt, Instant occurredAt)
             implements DomainEvent {
-        public ReadingProcessed(UUID userId, UUID deviceId, UUID meterId,
-                                BigDecimal consumptionKwh, Instant recordedAt) {
-            this(userId, deviceId, meterId, consumptionKwh, recordedAt, Instant.now());
+        public ReadingProcessed(UUID userId, UUID deviceId, UUID meterId, UUID siteId,
+                                BigDecimal consumptionKwh, BigDecimal powerKw, Instant recordedAt) {
+            this(userId, deviceId, meterId, siteId, consumptionKwh, powerKw, recordedAt,
+                    Instant.now());
         }
     }
 
