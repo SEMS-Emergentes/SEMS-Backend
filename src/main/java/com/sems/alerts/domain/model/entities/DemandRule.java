@@ -76,6 +76,20 @@ public class DemandRule {
     }
 
     /** Demanda a la que se dispara el aviso, en kW. */
+    /**
+     * Pone al dia la potencia contratada desde el local.
+     *
+     * <p>La regla guarda el numero para calcular su umbral, pero el dueno del
+     * dato es el local: su contrato con la distribuidora. Si se renegocia la
+     * potencia, el aviso tiene que moverse con ella sin que nadie edite la
+     * regla; de lo contrario seguiria avisando con un tope que ya no existe.
+     */
+    public void sincronizarPotenciaContratada(double potenciaDelLocal) {
+        if (potenciaDelLocal > 0) {
+            this.contractedPowerKw = potenciaDelLocal;
+        }
+    }
+
     public double umbralDeAvisoKw() {
         return contractedPowerKw * warningPercent / 100d;
     }

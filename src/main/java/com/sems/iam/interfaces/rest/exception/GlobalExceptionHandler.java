@@ -9,6 +9,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -130,6 +131,23 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.BAD_REQUEST, campo == null
                 ? "the request body could not be read"
                 : "field '" + campo + "' has the wrong type");
+    }
+
+    /**
+     * The database refused the data: that is the request's problem, not ours.
+     *
+     * <p>A field longer than its column reached the driver and came back as a
+     * 500 with "Unexpected error". It is the same shape as the three above: an
+     * input the caller could fix, reported as if the server had broken.
+     *
+     * <p>This is a net, not a substitute for validating. Where a length or a
+     * rule is known, the domain rejects it first with a message that says which
+     * field and why; what lands here is what slipped past.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<?> handleDataIntegrity(DataIntegrityViolationException ex) {
+        return response(HttpStatus.BAD_REQUEST,
+                "the request contains a value the database rejected; check field lengths and uniqueness");
     }
 
     /**

@@ -72,7 +72,8 @@ public final class AlertResources {
             @NotBlank(message = "is required") String siteId,
             @NotBlank(message = "is required") String userId,
             String ruleName,
-            @NotNull(message = "is required") Double contractedPowerKw,
+            // Opcional: la pone el local. Si viene y no coincide, se rechaza.
+            Double contractedPowerKw,
             Double warningPercent,
             Boolean active) {
     }

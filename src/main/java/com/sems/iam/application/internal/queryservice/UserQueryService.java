@@ -43,6 +43,7 @@ public class UserQueryService {
      */
     private UserResource toResource(UserJpaEntity user) {
         List<String> roles = userRoleRepository.findByUser_UserId(user.getUserId()).stream().map(ur -> ur.getRole().getName()).toList();
-        return new UserResource(user.getUserId(), user.getEmailAddress(), roles);
+        return new UserResource(user.getUserId(), user.getEmailAddress(), roles,
+                user.getFullName(), user.getSegment());
     }
 }

@@ -37,6 +37,26 @@ public final class DomainEvents {
         Instant occurredAt();
     }
 
+    // ------------------------------------------------------- organizaciones
+
+    /**
+     * Un local se dio de baja.
+     *
+     * <p>Lo escuchan energia y dispositivos para desactivar lo que tenian
+     * instalado alli. Va por evento y no por llamada directa porque
+     * organizaciones no sabe que es un medidor ni un equipo, y no deberia tener
+     * que saberlo para cerrar un local.
+     *
+     * <p>{@code userId} es quien pidio la baja, no el dueno del equipo: sirve
+     * para rastrear quien cerro que, no para decidir sobre que actuar.
+     */
+    public record SiteArchived(UUID userId, UUID siteId, Instant occurredAt)
+            implements DomainEvent {
+        public SiteArchived(UUID userId, UUID siteId) {
+            this(userId, siteId, Instant.now());
+        }
+    }
+
     // ---------------------------------------------------------------- iam
 
     public record UserRegistered(UUID userId, String emailAddress, String role, Instant occurredAt)

@@ -1,5 +1,7 @@
 package com.sems.organizations.interfaces.acl;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,18 +19,56 @@ import java.util.UUID;
  * podria colgar un medidor de la zona de otro establecimiento, y el consumo
  * quedaria atribuido al area equivocada.
  *
- * <p>El modulo de dispositivos resuelve la misma necesidad con un puerto propio
- * ({@code SiteDirectory}) que declara el consumidor. Ambos patrones conviven en
- * el proyecto; unificarlos es una limpieza pendiente, no un cambio de esta
- * entrega.
+ * <p>Energia y dispositivos entran los dos por aqui. Tambien devuelve el nombre
+ * del local y de la zona: el desglose de consumo se lee por nombre, y pedirselo
+ * a quien es dueno del dato sale mas barato que copiarlo en cada modulo.
  */
 public interface OrganizationsAcl {
+
+    /**
+     * Lo que otro modulo necesita saber de un local para repartir consumo:
+     * como se llama, cuanta potencia tiene contratada y con que tarifa se
+     * factura.
+     *
+     * <p>La categoria tarifaria viaja como texto porque energia no conoce el
+     * enum de organizaciones; es quien la recibe el que la traduce.
+     */
+    record SiteSummary(UUID siteId, String siteCode, String name,
+                       BigDecimal contractedPowerKw, String tariffCategory,
+                       boolean excludesSundaysFromPeak) {
+    }
+
+    /** Lo que otro modulo necesita saber de una zona: como se llama y de que tipo es. */
+    record ZoneSummary(UUID zoneId, String name, String zoneType) {
+    }
+
+    /** Datos del local, o vacio si no existe o esta archivado. */
+    Optional<SiteSummary> siteSummary(UUID siteId);
+
+    /** Locales vigentes de la organizacion, en el orden en que se registraron. */
+    List<SiteSummary> activeSitesOf(UUID organizationId);
+
+    /** Zonas vigentes del local. */
+    List<ZoneSummary> activeZonesOf(UUID siteId);
+
+    /** Si el local existe, este vigente o no. */
+    boolean siteExists(UUID siteId);
 
     /** Si el local existe y esta vigente. */
     boolean siteIsActive(UUID siteId);
 
     /** Si la zona existe, esta vigente y pertenece a ese local. */
     boolean zoneBelongsToSite(UUID zoneId, UUID siteId);
+
+    /**
+     * Potencia contratada del local, o vacio si no existe o no esta vigente.
+     *
+     * <p>La pide alertas para que el aviso de demanda no guarde su propia copia
+     * del dato. El contrato con la distribuidora es del local; tener dos
+     * numeros para la misma potencia significa que uno de los dos esta
+     * desactualizado y nadie se entera.
+     */
+    Optional<BigDecimal> contractedPowerOf(UUID siteId);
 
     /** El local al que pertenece la zona, o vacio si la zona no existe. */
     Optional<UUID> siteOfZone(UUID zoneId);
