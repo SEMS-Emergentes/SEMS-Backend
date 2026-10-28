@@ -106,13 +106,6 @@ public class AlertCommandService {
                 .map(java.math.BigDecimal::doubleValue)
                 .orElse(null);
 
-        // La potencia del local manda sobre la que la regla tenga guardada: si
-        // se renegocio el contrato, el aviso se mueve con el sin que nadie
-        // tenga que editar la regla.
-        Double potenciaDelLocal = organizaciones.contractedPowerOf(siteId)
-                .map(java.math.BigDecimal::doubleValue)
-                .orElse(null);
-
         for (DemandRule regla : demandRules.findActiveBySiteId(siteId)) {
             if (potenciaDelLocal != null) {
                 regla.sincronizarPotenciaContratada(potenciaDelLocal);
