@@ -182,6 +182,6 @@ public class AccountRecoveryService {
         String refreshToken = authTokens.issueRefreshToken(user.getUserId());
 
         return new LoginResponse(accessToken, refreshToken, user.getUserId(),
-                user.getEmailAddress(), roles);
+                user.getEmailAddress(), roles, user.getFullName(), user.getSegment());
     }
 }

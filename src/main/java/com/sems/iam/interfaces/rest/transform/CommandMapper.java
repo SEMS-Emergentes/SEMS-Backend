@@ -16,7 +16,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class CommandMapper {
-    public RegisterUserCommand toCommand(RegisterRequest request) { return new RegisterUserCommand(request.emailAddress(), request.password(), request.role()); }
+    public RegisterUserCommand toCommand(RegisterRequest request) { return new RegisterUserCommand(request.emailAddress(), request.password(),
+            request.role(), request.fullName(), request.segment()); }
     public LoginCommand toCommand(LoginRequest request) { return new LoginCommand(request.emailAddress(), request.password()); }
     // Here the id comes from the URL path, while the role comes from the body,
     // so this overload takes both pieces and combines them into one command.

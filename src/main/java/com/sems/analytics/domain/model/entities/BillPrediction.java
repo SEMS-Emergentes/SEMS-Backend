@@ -1,5 +1,6 @@
 package com.sems.analytics.domain.model.entities;
 
+import com.sems.shared.errors.AppException;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
@@ -84,6 +85,12 @@ public class BillPrediction {
                                         double errorMargin, String siteId, double kwhPeak,
                                         double kwhOffPeak, double maxDemandKw, double energyCost,
                                         double powerCost) {
+        // Un periodo que termina antes de empezar no describe ningun mes, y
+        // cualquier agregado que lo cruce con fechas lo contara mal o no lo
+        // contara. Se rechaza aqui, donde los dos extremos estan a la vista.
+        if (periodStart != null && periodEnd != null && periodEnd.isBefore(periodStart)) {
+            throw AppException.validation("period_end cannot be before period_start");
+        }
         Instant now = Instant.now();
         return new BillPrediction(UUID.randomUUID(), userId, year, month, periodStart, periodEnd,
                 estimatedKwh, estimatedAmount, currency == null ? "PEN" : currency,

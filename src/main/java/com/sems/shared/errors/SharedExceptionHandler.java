@@ -1,7 +1,11 @@
 package com.sems.shared.errors;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import jakarta.validation.ConstraintViolationException;
+import java.lang.reflect.Field;
 import java.util.stream.Collectors;
+import org.springframework.validation.FieldError;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -49,11 +53,53 @@ public class SharedExceptionHandler {
     /** Falla la validacion de un cuerpo anotado con {@code @Valid}. */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleBodyValidation(MethodArgumentNotValidException ex) {
+        Class<?> cuerpo = ex.getBindingResult().getTarget() == null
+                ? null : ex.getBindingResult().getTarget().getClass();
         String detail = ex.getBindingResult().getFieldErrors().stream()
-                .map(error -> error.getField() + " " + error.getDefaultMessage())
+                .map(error -> nombreEnElJson(cuerpo, error) + " " + error.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         return ResponseEntity.badRequest()
                 .body(new ErrorResponse(AppException.Code.VALIDATION_ERROR.name(), detail));
+    }
+
+    /**
+     * Nombre del campo tal y como viaja en el JSON.
+     *
+     * <p>La validacion conoce el nombre del campo en Java, pero el cliente
+     * nunca lo ha visto: en los modulos que responden en snake_case mandaba
+     * {@code threshold_name} y la respuesta le contestaba "thresholdName is
+     * required", es decir le pedia arreglar un campo que la API no acepta.
+     * Aqui se traduce con la misma estrategia que usa Jackson para serializar
+     * ese cuerpo, de modo que el mensaje nombra siempre algo que existe en el
+     * contrato.
+     */
+    private static String nombreEnElJson(Class<?> cuerpo, FieldError error) {
+        String campo = error.getField();
+        if (cuerpo == null) {
+            return campo;
+        }
+        JsonNaming naming = cuerpo.getAnnotation(JsonNaming.class);
+        if (naming == null || !PropertyNamingStrategies.SnakeCaseStrategy.class
+                .isAssignableFrom(naming.value())) {
+            return campo;
+        }
+        // Un @JsonProperty explicito manda sobre la estrategia de la clase.
+        try {
+            Field declarado = cuerpo.getDeclaredField(campo);
+            var explicito = declarado.getAnnotation(
+                    com.fasterxml.jackson.annotation.JsonProperty.class);
+            if (explicito != null && !explicito.value().isBlank()) {
+                return explicito.value();
+            }
+        } catch (NoSuchFieldException sinCampo) {
+            // Un error anidado no corresponde a un campo declarado aqui.
+        }
+        // Un error anidado llega como "periodo.inicio": se traduce cada tramo
+        // por separado para no convertir el punto en un guion bajo.
+        var estrategia = new PropertyNamingStrategies.SnakeCaseStrategy();
+        return java.util.Arrays.stream(campo.split("\\."))
+                .map(estrategia::translate)
+                .collect(Collectors.joining("."));
     }
 
     /** Falla la validacion de un parametro suelto. */

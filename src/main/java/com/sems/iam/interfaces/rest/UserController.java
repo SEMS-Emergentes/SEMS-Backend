@@ -1,9 +1,12 @@
 package com.sems.iam.interfaces.rest;
 
 import com.sems.iam.application.internal.commandservices.AccountRecoveryService;
+import com.sems.iam.application.internal.commandservices.UserProfileService;
 import com.sems.iam.application.internal.queryservice.UserQueryService;
 import com.sems.iam.infrastructure.authorization.sfs.model.AuthenticatedUserDetails;
+import com.sems.iam.interfaces.rest.resources.UpdateProfileRequest;
 import com.sems.iam.interfaces.rest.resources.UserResource;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,9 +21,24 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final UserQueryService userQueryService;
     private final AccountRecoveryService accountRecoveryService;
+    private final UserProfileService userProfileService;
 
     @GetMapping("/me")
     public ResponseEntity<UserResource> me(@AuthenticationPrincipal AuthenticatedUserDetails user) { return ResponseEntity.ok(userQueryService.getById(user.getUserId())); }
+
+    /**
+     * Cambia el perfil propio.
+     *
+     * <p>Como en la baja, el usuario sale del token y no de la ruta: nadie
+     * puede renombrar a otro.
+     */
+    @PutMapping("/me")
+    public ResponseEntity<UserResource> updateMe(
+            @AuthenticationPrincipal AuthenticatedUserDetails user,
+            @Valid @RequestBody UpdateProfileRequest request) {
+        userProfileService.updateProfile(user.getUserId(), request.fullName(), request.segment());
+        return ResponseEntity.ok(userQueryService.getById(user.getUserId()));
+    }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping

@@ -40,6 +40,13 @@ public class DemandRuleJpaEntity {
     @Column(name = "active", nullable = false)
     private boolean active;
 
+    // Ultimo aviso levantado por esta regla, para no repetirlo en cada lectura.
+    @Column(name = "last_alert_level", length = 20)
+    private String lastAlertLevel;
+
+    @Column(name = "last_alert_at")
+    private Instant lastAlertAt;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

@@ -86,14 +86,22 @@ public final class EnergyResources {
     public record ReadingResponse(
             String id, String userId, String meterId, String deviceId, double powerWatts,
             double voltage, double current, double frequency, double energyKwh,
+            // Coste de esta lectura con la tarifa del local y la franja horaria
+            // en que se midio. Viaja con la lectura para que ninguna pantalla
+            // tenga que multiplicar por un precio propio.
+            BigDecimal estimatedCost,
             Instant timestamp, String readingType, String phase, Instant createdAt) {
 
         public static ReadingResponse from(EnergyReading e) {
+            return from(e, null);
+        }
+
+        public static ReadingResponse from(EnergyReading e, BigDecimal estimatedCost) {
             PowerReading p = e.getMeasurement();
             return new ReadingResponse(e.getId().toString(), e.getUserId(), e.getMeterId(),
                     e.getDeviceId(), p.powerWatts(), p.voltage(), p.current(), p.frequency(),
-                    p.energyKwh(), e.getTimestamp(), e.getReadingType(), e.getPhase(),
-                    e.getCreatedAt());
+                    p.energyKwh(), estimatedCost, e.getTimestamp(), e.getReadingType(),
+                    e.getPhase(), e.getCreatedAt());
         }
     }
 
@@ -143,14 +151,22 @@ public final class EnergyResources {
                                  BigDecimal energyPeakPerKwh, BigDecimal energyOffPeakPerKwh,
                                  BigDecimal powerPerKwMonth, BigDecimal excessPowerPerKwMonth,
                                  BigDecimal fixedCharge, BigDecimal igv, String peakHours,
-                                 boolean inPeakNow, Instant timestamp) {
+                                 boolean peakEveryDay, boolean inPeakNow, Instant timestamp) {
 
         public static TariffResponse from(CommercialTariff t) {
             return new TariffResponse(t.provider(), t.tariffCategory(), t.currency(),
                     t.energiaPuntaPorKwh(), t.energiaFueraDePuntaPorKwh(), t.potenciaPorKwMes(),
                     t.excesoDePotenciaPorKwMes(), t.cargoFijoMensual(), t.igv(),
-                    String.format("%02d:00-%02d:00 lun-sab", HorarioPunta.HORA_INICIO,
+                    // Solo las horas. Antes decia "lun-sab", que es falso: la
+                    // hora punta rige todos los dias y excluir domingos es una
+                    // opcion que el cliente pide a su distribuidora, no una
+                    // regla general. Que dias cuentan depende del suministro,
+                    // asi que esta respuesta —que es de la tarifa, no de un
+                    // local— se limita a la franja horaria y deja el matiz a
+                    // peakEveryDay.
+                    String.format("%02d:00-%02d:00", HorarioPunta.HORA_INICIO,
                             HorarioPunta.HORA_FIN),
+                    true,
                     HorarioPunta.esHoraPunta(Instant.now()), t.timestamp());
         }
     }

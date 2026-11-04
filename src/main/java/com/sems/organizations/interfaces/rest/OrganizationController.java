@@ -5,7 +5,9 @@ import com.sems.organizations.application.OrganizationCommandService;
 import com.sems.organizations.application.OrganizationQueryService;
 import com.sems.organizations.interfaces.rest.resources.OrganizationResources.*;
 import com.sems.shared.errors.AppException;
+import com.sems.iam.infrastructure.authorization.sfs.model.AuthenticatedUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -82,9 +84,10 @@ public class OrganizationController {
     @Operation(summary = "Active sites of the organization")
     @PreAuthorize("@accesoOrganizaciones.organizacion(#organizationId)")
     @GetMapping("/organizations/{organizationId}/sites")
-    public List<SiteResource> listSites(@PathVariable String organizationId) {
-        return queries.listSites(parseId(organizationId, "organization_id")).stream()
-                .map(SiteResource::from).toList();
+    public List<SiteResource> listSites(@PathVariable String organizationId,
+                                        @AuthenticationPrincipal AuthenticatedUserDetails quien) {
+        return queries.listSites(parseId(organizationId, "organization_id"), quien.getUserId())
+                .stream().map(SiteResource::from).toList();
     }
 
     @Operation(summary = "People with access to the organization")
@@ -132,8 +135,9 @@ public class OrganizationController {
     @Operation(summary = "Archives an organization and everything under it")
     @PreAuthorize("@accesoOrganizaciones.administraOrganizacion(#organizationId)")
     @DeleteMapping("/organizations/{organizationId}")
-    public ResponseEntity<Void> archiveOrganization(@PathVariable String organizationId) {
-        commands.archiveOrganization(parseId(organizationId, "organization_id"));
+    public ResponseEntity<Void> archiveOrganization(@PathVariable String organizationId,
+                                                   @AuthenticationPrincipal AuthenticatedUserDetails quien) {
+        commands.archiveOrganization(parseId(organizationId, "organization_id"), quien.getUserId());
         return ResponseEntity.noContent().build();
     }
 
@@ -158,8 +162,9 @@ public class OrganizationController {
     @Operation(summary = "Archives a site")
     @PreAuthorize("@accesoOrganizaciones.modificaLocal(#siteId)")
     @DeleteMapping("/sites/{siteId}")
-    public ResponseEntity<Void> archiveSite(@PathVariable String siteId) {
-        commands.archiveSite(parseId(siteId, "site_id"));
+    public ResponseEntity<Void> archiveSite(@PathVariable String siteId,
+                                           @AuthenticationPrincipal AuthenticatedUserDetails quien) {
+        commands.archiveSite(parseId(siteId, "site_id"), quien.getUserId());
         return ResponseEntity.noContent().build();
     }
 

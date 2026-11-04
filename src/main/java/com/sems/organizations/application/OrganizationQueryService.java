@@ -30,8 +30,27 @@ public class OrganizationQueryService {
                 .orElseThrow(() -> AppException.notFound("organization not found"));
     }
 
-    public List<Site> listSites(UUID organizationId) {
-        return sites.findByOrganizationId(organizationId);
+    /**
+     * Locales de la organizacion que esa persona alcanza.
+     *
+     * <p>Un SUPERVISOR esta asignado a un local concreto y no deberia ver el
+     * resto ni en lista. Podia: abrir otro local devolvia 403, pero el listado
+     * de la organizacion se los mostraba todos con su codigo, direccion y
+     * potencia contratada. {@link Membership#alcanzaAlLocal} existe justo para
+     * marcar ese limite y el listado no lo consultaba.
+     *
+     * <p>Sin membresia vigente no se devuelve nada. Llegar aqui ya exige
+     * pertenecer a la organizacion, asi que el caso solo se da si la membresia
+     * se revoco entre la comprobacion y la consulta.
+     */
+    public List<Site> listSites(UUID organizationId, UUID userId) {
+        List<Site> todos = sites.findByOrganizationId(organizationId);
+        return memberships.findByOrganizationAndUser(organizationId, userId)
+                .filter(Membership::isActive)
+                .map(vinculo -> todos.stream()
+                        .filter(s -> vinculo.alcanzaAlLocal(s.getSiteId()))
+                        .toList())
+                .orElseGet(List::of);
     }
 
     public Site getSite(UUID siteId) {

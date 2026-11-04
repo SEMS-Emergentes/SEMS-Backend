@@ -2,6 +2,8 @@ package com.sems.energy.interfaces.rest;
 
 import com.sems.energy.application.EnergyCommandService;
 import com.sems.energy.application.EnergyQueryService;
+import com.sems.energy.application.ReadingPricingService;
+import com.sems.energy.domain.model.entities.EnergyReading;
 import com.sems.energy.interfaces.rest.resources.EnergyResources.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +26,15 @@ public class EnergyReadingController {
 
     private final EnergyCommandService commands;
     private final EnergyQueryService queries;
+    private final ReadingPricingService precios;
+
+    /** Cada lectura con su coste, calculado con la tarifa del local. */
+    private List<ReadingResponse> conCoste(List<EnergyReading> lecturas) {
+        var costes = precios.costOf(lecturas);
+        return java.util.stream.IntStream.range(0, lecturas.size())
+                .mapToObj(i -> ReadingResponse.from(lecturas.get(i), costes.get(i)))
+                .toList();
+    }
 
     @Operation(summary = "Records a new reading")
     @PreAuthorize("@accesoUsuario.esMio(#request.userId())")
@@ -32,7 +43,8 @@ public class EnergyReadingController {
         var reading = commands.recordReading(request.userId(), request.meterId(), request.deviceId(),
                 request.powerWatts(), request.voltage(), request.current(), request.frequency(),
                 request.energyKwh(), request.timestamp(), request.readingType(), request.phase());
-        return ResponseEntity.status(HttpStatus.CREATED).body(ReadingResponse.from(reading));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ReadingResponse.from(reading, precios.costOf(reading)));
     }
 
     @Operation(summary = "A user's readings, newest first")
@@ -40,7 +52,7 @@ public class EnergyReadingController {
     @GetMapping("/user/{userId}")
     public List<ReadingResponse> byUser(@PathVariable String userId,
                                         @RequestParam(defaultValue = "100") int limit) {
-        return queries.readingsByUser(userId, limit).stream().map(ReadingResponse::from).toList();
+        return conCoste(queries.readingsByUser(userId, limit));
     }
 
     @Operation(summary = "Readings from a device")
@@ -49,8 +61,7 @@ public class EnergyReadingController {
     public List<ReadingResponse> byDevice(@PathVariable String deviceId,
                                           @RequestParam(defaultValue = "50") int limit,
                                           @RequestParam(defaultValue = "0") int skip) {
-        return queries.readingsByDevice(deviceId, limit, skip).stream()
-                .map(ReadingResponse::from).toList();
+        return conCoste(queries.readingsByDevice(deviceId, limit, skip));
     }
 
     @Operation(summary = "A user's readings within a date range")
@@ -59,20 +70,22 @@ public class EnergyReadingController {
     public List<ReadingResponse> byRange(@RequestParam String userId,
                                          @RequestParam Instant from,
                                          @RequestParam Instant to) {
-        return queries.readingsByRange(userId, from, to).stream().map(ReadingResponse::from).toList();
+        return conCoste(queries.readingsByRange(userId, from, to));
     }
 
     @Operation(summary = "Latest reading from a meter")
     @PreAuthorize("@accesoEnergia.lecturasDelMedidor(#meterId)")
     @GetMapping("/meter/{meterId}/latest")
     public ReadingResponse latestByMeter(@PathVariable String meterId) {
-        return ReadingResponse.from(queries.latestByMeter(meterId));
+        EnergyReading lectura = queries.latestByMeter(meterId);
+        return ReadingResponse.from(lectura, precios.costOf(lectura));
     }
 
     @Operation(summary = "Gets a reading by its identifier")
     @PreAuthorize("@accesoEnergia.lectura(#readingId)")
     @GetMapping("/{readingId}")
     public ReadingResponse byId(@PathVariable UUID readingId) {
-        return ReadingResponse.from(queries.readingById(readingId));
+        EnergyReading lectura = queries.readingById(readingId);
+        return ReadingResponse.from(lectura, precios.costOf(lectura));
     }
 }

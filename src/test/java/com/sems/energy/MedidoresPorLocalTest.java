@@ -108,7 +108,10 @@ class MedidoresPorLocalTest {
                 {"user_id":"%s","site_id":"%s","zone_id":"no-es-un-uuid",
                  "meter_serial":"US19-MALA"}""".formatted(userId, local)));
 
-        ejecutar(400, enviar("/api/v1/energy-meters", """
+        // Un local que no existe es 404; uno archivado seria 409. Antes esta
+        // misma situacion respondia 400 aqui, 404 en dispositivos y 409 en
+        // organizaciones.
+        ejecutar(404, enviar("/api/v1/energy-meters", """
                 {"user_id":"%s","site_id":"11111111-2222-3333-4444-555555555555",
                  "meter_serial":"US19-FANTASMA"}""".formatted(userId)));
     }
