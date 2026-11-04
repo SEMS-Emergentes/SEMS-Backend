@@ -72,14 +72,6 @@ public class EnergyQueryService {
                 .orElseThrow(() -> AppException.notFound("Consumption '" + id + "' not found"));
     }
 
-    public List<DeviceConsumption> consumptionsByUser(String userId) {
-        return consumptions.findByUserId(userId);
-    }
-
-    public List<DeviceConsumption> topConsumersByUser(String userId, int limit) {
-        return consumptions.findTopByUserId(userId, limit);
-    }
-
     public ConsumptionAlert alertById(UUID alertId) {
         return alerts.findById(alertId)
                 .orElseThrow(() -> AppException.notFound("Alert '" + alertId + "' not found"));
