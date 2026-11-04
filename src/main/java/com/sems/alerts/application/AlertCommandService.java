@@ -77,25 +77,16 @@ public class AlertCommandService {
      * distinta: con WARNING todavia puede apagar algo y evitar el recargo; con
      * EXCEEDED el cargo del mes ya esta hecho y lo unico util es que no se
      * repita.
+     *
+     * <p>La ventana de silencio de la regla se respeta venga la evaluacion de
+     * donde venga. Antes solo la aplicaba la ruta de las lecturas, asi que
+     * pulsar el boton de evaluar duplicaba el aviso que la ultima lectura
+     * acababa de levantar sola. Quien lee la bandeja no distingue esas dos
+     * rutas: para el es el mismo pico y el mismo aviso dos veces, y el ruido se
+     * mide en avisos recibidos, no en quien pidio la evaluacion.
      */
     @Transactional
     public List<Alert> evaluateDemand(UUID siteId, double demandaKw) {
-        return evaluateDemand(siteId, demandaKw, false);
-    }
-
-    /**
-     * Evaluacion disparada por una lectura, no por una persona.
-     *
-     * <p>Se diferencia de la manual en que no repite el mismo aviso: con una
-     * lectura cada pocos minutos, avisar en todas durante un pico sostenido
-     * llenaria la bandeja de copias y el aviso dejaria de leerse.
-     */
-    @Transactional
-    public List<Alert> evaluarDemandaAutomatica(UUID siteId, double demandaKw) {
-        return evaluateDemand(siteId, demandaKw, true);
-    }
-
-    private List<Alert> evaluateDemand(UUID siteId, double demandaKw, boolean automatica) {
         List<Alert> levantadas = new ArrayList<>();
         Instant ahora = Instant.now();
 
@@ -112,18 +103,14 @@ public class AlertCommandService {
             }
             DemandLevel nivel = regla.evaluar(demandaKw);
 
-            if (automatica) {
-                boolean avisar = regla.mereceAviso(nivel, ahora);
-                regla.anotarEvaluacion(nivel, ahora);
-                demandRules.save(regla);
-                if (!avisar) {
-                    continue;
-                }
-            } else if (nivel == DemandLevel.OK) {
-                continue;
-            }
-
-            if (nivel == DemandLevel.OK) {
+            // Anotar siempre, avisar solo si toca: la regla necesita saber en
+            // que nivel quedo incluso cuando se calla, porque es eso lo que
+            // hace que el pico siguiente se compare con el anterior y no con
+            // la nada.
+            boolean avisar = regla.mereceAviso(nivel, ahora);
+            regla.anotarEvaluacion(nivel, ahora);
+            demandRules.save(regla);
+            if (!avisar) {
                 continue;
             }
 

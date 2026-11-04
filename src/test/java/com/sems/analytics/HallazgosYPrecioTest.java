@@ -129,25 +129,25 @@ class HallazgosYPrecioTest {
                 .formatted(local, userId)));
 
         // 92 kW sobre 100 contratados: dentro del contrato pero en el margen.
-        var primera = alertas.evaluarDemandaAutomatica(java.util.UUID.fromString(local), 92);
+        var primera = alertas.evaluateDemand(java.util.UUID.fromString(local), 92);
         assertThat(primera).hasSize(1);
         assertThat(primera.get(0).getSeverity()).isEqualTo("WARNING");
 
         // La siguiente lectura sigue alta: el aviso no se repite, porque una
         // bandeja con cuarenta copias del mismo aviso no se lee.
-        assertThat(alertas.evaluarDemandaAutomatica(java.util.UUID.fromString(local), 93))
+        assertThat(alertas.evaluateDemand(java.util.UUID.fromString(local), 93))
                 .isEmpty();
 
         // Superar lo contratado si es una situacion nueva y vuelve a avisar.
-        var exceso = alertas.evaluarDemandaAutomatica(java.util.UUID.fromString(local), 120);
+        var exceso = alertas.evaluateDemand(java.util.UUID.fromString(local), 120);
         assertThat(exceso).hasSize(1);
         assertThat(exceso.get(0).getSeverity()).isEqualTo("CRITICAL");
 
         // Y al volver a la normalidad se olvida, para que el proximo pico avise
         // enseguida y no media hora despues.
-        assertThat(alertas.evaluarDemandaAutomatica(java.util.UUID.fromString(local), 40))
+        assertThat(alertas.evaluateDemand(java.util.UUID.fromString(local), 40))
                 .isEmpty();
-        assertThat(alertas.evaluarDemandaAutomatica(java.util.UUID.fromString(local), 92))
+        assertThat(alertas.evaluateDemand(java.util.UUID.fromString(local), 92))
                 .hasSize(1);
     }
 

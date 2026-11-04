@@ -120,11 +120,15 @@ public class DemandRule {
     }
 
     /**
-     * Si una evaluacion automatica debe levantar aviso.
+     * Si una evaluacion debe levantar aviso.
      *
      * <p>Avisa cuando la situacion cambia —se entra en aviso, o se pasa de
      * aviso a exceso— y, si no cambia, como mucho una vez cada media hora. Un
      * pico sostenido sigue mereciendo recordatorio, pero no uno por lectura.
+     *
+     * <p>No pregunta de donde viene la evaluacion, y es a proposito: la ventana
+     * la cuenta la regla, de modo que la lectura automatica y el boton de
+     * evaluar comparten el mismo silencio en vez de tener uno cada uno.
      */
     public boolean mereceAviso(DemandLevel nivel, Instant ahora) {
         if (nivel == DemandLevel.OK) {

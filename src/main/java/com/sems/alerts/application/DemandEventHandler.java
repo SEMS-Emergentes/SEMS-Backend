@@ -37,7 +37,7 @@ public class DemandEventHandler {
         // la demanda facturable —esa es la maxima del mes en intervalos de
         // quince minutos— pero es la unica senal disponible en tiempo real, y
         // para avisar a tiempo es la que sirve.
-        var levantadas = alertas.evaluarDemandaAutomatica(event.siteId(),
+        var levantadas = alertas.evaluateDemand(event.siteId(),
                 event.powerKw().doubleValue());
         if (!levantadas.isEmpty()) {
             log.info("Demanda del local {}: {} aviso(s) levantado(s)", event.siteId(),
