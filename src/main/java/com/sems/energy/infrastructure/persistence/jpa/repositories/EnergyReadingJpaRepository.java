@@ -24,4 +24,6 @@ public interface EnergyReadingJpaRepository extends JpaRepository<EnergyReadingJ
     Optional<EnergyReadingJpaEntity> findFirstByMeterIdOrderByTimestampDesc(String meterId);
 
     Optional<EnergyReadingJpaEntity> findFirstByDeviceIdOrderByTimestampDesc(String deviceId);
+
+    boolean existsByMeterIdAndTimestamp(String meterId, Instant timestamp);
 }

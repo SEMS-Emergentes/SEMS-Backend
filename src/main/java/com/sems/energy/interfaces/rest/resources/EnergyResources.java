@@ -5,10 +5,16 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.sems.energy.domain.model.entities.*;
 import com.sems.energy.domain.model.valueobjects.*;
+import com.sems.energy.application.MeterCredentialService.IssuedCredential;
+import com.sems.energy.application.ReadingIngestionService.IngestionResult;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Contrato JSON del modulo de energia.
@@ -60,6 +66,41 @@ public final class EnergyResources {
     /** Peticion de traslado de un medidor a otra zona del mismo local. */
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public record ReassignMeterZoneRequest(String zoneId) {
+    }
+
+    /**
+     * Lote que envia un medidor por su cuenta.
+     *
+     * <p>No trae {@code user_id} ni {@code meter_id}: los dos salen de la
+     * credencial con la que se autentica el aparato, de modo que no puede
+     * escribir en la cuenta de otro ni hacerse pasar por otro medidor.
+     *
+     * <p>El tope de 500 por peticion acota lo que una sola llamada puede
+     * ocupar, y deja sitio de sobra para el volcado de un aparato que estuvo
+     * horas sin conexion midiendo cada minuto.
+     */
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record IngestReadingsRequest(
+            @NotEmpty(message = "is required")
+            @Size(max = 500, message = "cannot carry more than 500 readings")
+            @Valid List<IncomingReadingResource> readings) {
+    }
+
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record IncomingReadingResource(
+            @NotNull(message = "is required") Double energyKwh,
+            Double powerWatts,
+            Double voltage,
+            Double current,
+            Double frequency,
+            // Opcional: si el aparato no lleva el reloj en hora, se fecha a la
+            // llegada. Lo que no se acepta es una marca futura.
+            Instant timestamp,
+            // El medidor mide el local o la zona; atribuir la lectura a un
+            // equipo es opcional y lo declara quien la envia.
+            String deviceId,
+            String readingType,
+            String phase) {
     }
 
     // -------------------------------------------------------------- respuestas
@@ -196,5 +237,36 @@ public final class EnergyResources {
                     b.costoEnergia(), b.costoPotencia(), b.pesoDeLaPotencia(), b.cargoFijo(),
                     b.subtotal(), b.igv(), b.total(), b.currency());
         }
+    }
+
+    /**
+     * Credencial recien emitida.
+     *
+     * <p>{@code api_key} viaja aqui la unica vez que existe en claro: del lado
+     * del servidor solo queda su hash. Quien la pierda tiene que emitir otra.
+     */
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record MeterCredentialResponse(String meterId, String apiKey, Instant issuedAt) {
+
+        public static MeterCredentialResponse from(IssuedCredential c) {
+            return new MeterCredentialResponse(c.meterId().toString(), c.apiKey(), c.issuedAt());
+        }
+    }
+
+    /** Resultado de un lote: cuantas entraron, cuantas ya estaban y cuales no pasaron. */
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record IngestionResponse(String meterId, int accepted, int duplicated,
+                                    List<RejectedReadingResource> rejected) {
+
+        public static IngestionResponse from(IngestionResult r) {
+            return new IngestionResponse(r.meterId().toString(), r.accepted(), r.duplicated(),
+                    r.rejected().stream()
+                            .map(x -> new RejectedReadingResource(x.index(), x.reason()))
+                            .toList());
+        }
+    }
+
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record RejectedReadingResource(int index, String reason) {
     }
 }
