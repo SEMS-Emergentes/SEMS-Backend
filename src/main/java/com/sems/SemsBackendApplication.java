@@ -16,12 +16,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * <p>{@code @EnableAsync} permite que los consumidores de eventos de dominio
  * corran fuera del hilo de la peticion, igual que hacian los consumidores de
  * Kafka. {@code @EnableRetry} reemplaza el backoff escrito a mano del envio de
- * correos. {@code @EnableScheduling} deja la puerta abierta a tareas
- * periodicas, pero no hay ninguna: no existe un solo metodo {@code @Scheduled}
- * en el proyecto, asi que nada corre por tiempo. Aqui se describia un detector
- * de inactividad que nunca se escribio; las reglas de inactividad se crean y se
- * consultan por la API, pero nadie las evalua, y de ahi que
- * {@code InactivityRuleRepository.findAllActive()} siga sin un solo llamador.
+ * correos. {@code @EnableScheduling} sostiene la unica tarea periodica que hay,
+ * {@code InactivityWatchdog}: la inactividad de un equipo no se puede detectar
+ * con un evento, porque consiste precisamente en que no llega ninguno. Todo lo
+ * demas se evalua en el momento en que entra el dato.
  */
 @EnableAsync
 @EnableRetry

@@ -68,6 +68,8 @@ public final class AlertJpaEntities {
         @Column(name = "active", nullable = false) private boolean active;
         @Column(name = "created_at", nullable = false) private Instant createdAt;
         @Column(name = "updated_at", nullable = false) private Instant updatedAt;
+        /** Ultimo aviso de inactividad de esta regla. Columna nueva y opcional. */
+        @Column(name = "last_alert_at") private Instant lastAlertAt;
     }
 
     @Entity
