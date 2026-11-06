@@ -41,4 +41,13 @@ public interface EnergyAcl {
 
     /** Precios vigentes del local, o vacio si no tiene tarifa reconocible. */
     Optional<SitePrices> pricesOf(UUID siteId);
+
+    /**
+     * Cuando reporto por ultima vez un equipo, o vacio si nunca lo hizo.
+     *
+     * <p>La necesitan las alertas para saber si un equipo dejo de reportar. El
+     * dato es de energia porque sale de sus lecturas, no del registro del
+     * equipo: un equipo dado de alta no ha reportado nada todavia.
+     */
+    Optional<java.time.Instant> lastReadingOf(UUID deviceId);
 }
