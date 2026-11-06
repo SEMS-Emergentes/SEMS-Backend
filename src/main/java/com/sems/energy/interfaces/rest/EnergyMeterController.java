@@ -2,6 +2,7 @@ package com.sems.energy.interfaces.rest;
 
 import com.sems.energy.application.EnergyCommandService;
 import com.sems.energy.application.EnergyQueryService;
+import com.sems.energy.application.MeterCredentialService;
 import com.sems.energy.interfaces.rest.resources.EnergyResources.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +24,7 @@ public class EnergyMeterController {
 
     private final EnergyCommandService commands;
     private final EnergyQueryService queries;
+    private final MeterCredentialService credenciales;
 
     @Operation(summary = "Registers a new meter")
     @PreAuthorize("@accesoUsuario.esMio(#request.userId())")
@@ -76,6 +78,21 @@ public class EnergyMeterController {
     @PatchMapping("/{meterId}/deactivate")
     public MeterResponse deactivate(@PathVariable UUID meterId) {
         return MeterResponse.from(commands.deactivateMeter(meterId));
+    }
+
+    /**
+     * Emite la credencial con la que el medidor enviara sus lecturas solo.
+     *
+     * <p>Devuelve la clave en claro una unica vez. Repetir la llamada emite
+     * otra y deja la anterior sin valor, que es como se rota una clave perdida
+     * o sospechosa.
+     */
+    @Operation(summary = "Issues (or rotates) the meter's ingestion credential")
+    @PreAuthorize("@accesoEnergia.medidor(#meterId)")
+    @PostMapping("/{meterId}/credential")
+    public ResponseEntity<MeterCredentialResponse> issueCredential(@PathVariable UUID meterId) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(MeterCredentialResponse.from(credenciales.issue(meterId)));
     }
 
     @Operation(summary = "Gets a meter by its identifier")

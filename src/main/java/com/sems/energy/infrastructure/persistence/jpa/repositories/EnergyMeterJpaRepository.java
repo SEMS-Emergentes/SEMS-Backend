@@ -14,4 +14,6 @@ public interface EnergyMeterJpaRepository extends JpaRepository<EnergyMeterJpaEn
     List<EnergyMeterJpaEntity> findBySiteIdAndUnlinkedAtIsNullOrderByRegisteredAtDesc(String siteId);
 
     List<EnergyMeterJpaEntity> findByZoneIdAndUnlinkedAtIsNullOrderByRegisteredAtDesc(String zoneId);
+
+    Optional<EnergyMeterJpaEntity> findByCredentialHashAndUnlinkedAtIsNull(String credentialHash);
 }

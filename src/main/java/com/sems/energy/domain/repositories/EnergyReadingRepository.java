@@ -24,5 +24,14 @@ public interface EnergyReadingRepository {
      */
     List<EnergyReading> findByMeters(Collection<String> meterIds, Instant from);
     Optional<EnergyReading> findLatestByMeter(String meterId);
+
+    /**
+     * Si ese medidor ya tiene una lectura con esa marca de tiempo.
+     *
+     * <p>Es lo que hace idempotente la ingesta: un medidor que pierde la
+     * conexion reintenta el mismo lote al recuperarla, y sin esta comprobacion
+     * el consumo del dia se contaria dos veces.
+     */
+    boolean existsByMeterAndTimestamp(String meterId, Instant timestamp);
     Optional<EnergyReading> findLatestByDevice(String deviceId);
 }
