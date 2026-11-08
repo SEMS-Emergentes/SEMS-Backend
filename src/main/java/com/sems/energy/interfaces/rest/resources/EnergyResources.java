@@ -111,14 +111,19 @@ public final class EnergyResources {
             String id, String userId, String siteId, String zoneId,
             String meterSerial, String model, String brand,
             String location, MeterStatus status, String firmwareVersion, double maxPowerWatts,
-            Instant registeredAt, Instant lastSeenAt, Instant updatedAt) {
+            Instant registeredAt, Instant lastSeenAt, Instant updatedAt,
+            // Cuando se emitio la credencial de ingesta, o nulo si el medidor
+            // no tiene ninguna. Es la fecha y nunca la clave: con esto la
+            // interfaz distingue emitir de rotar y avisa de que rotar deja
+            // mudo al aparato hasta que le carguen la nueva.
+            Instant credentialIssuedAt) {
 
         public static MeterResponse from(EnergyMeter m) {
             return new MeterResponse(m.getId().toString(), m.getUserId(), m.getSiteId(),
                     m.getZoneId(), m.getMeterSerial(),
                     m.getModel(), m.getBrand(), m.getLocation(), m.getStatus(),
                     m.getFirmwareVersion(), m.getMaxPowerWatts(), m.getRegisteredAt(),
-                    m.getLastSeenAt(), m.getUpdatedAt());
+                    m.getLastSeenAt(), m.getUpdatedAt(), m.getCredentialIssuedAt());
         }
     }
 
