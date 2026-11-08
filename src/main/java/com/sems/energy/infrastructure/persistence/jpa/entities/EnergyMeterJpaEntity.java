@@ -12,7 +12,11 @@ import lombok.*;
                 @Index(name = "idx_em_meters_user", columnList = "user_id"),
                 @Index(name = "idx_em_meters_site", columnList = "site_id"),
                 @Index(name = "idx_em_meters_zone", columnList = "zone_id"),
-                @Index(name = "idx_em_meters_serial", columnList = "meter_serial", unique = true)
+                @Index(name = "idx_em_meters_serial", columnList = "meter_serial", unique = true),
+                // La ingesta busca el medidor por el hash de su credencial en
+                // cada peticion: sin indice seria un recorrido de la tabla por
+                // lectura recibida.
+                @Index(name = "idx_em_meters_credential", columnList = "credential_hash")
         })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class EnergyMeterJpaEntity {
@@ -80,4 +84,15 @@ public class EnergyMeterJpaEntity {
      */
     @Column(name = "unlinked_at")
     private Instant unlinkedAt;
+
+    /**
+     * Hash de la credencial de ingesta. Columna nueva y opcional, de modo que
+     * {@code ddl-auto=update} la agrega sin tocar las filas existentes, que se
+     * quedan sin credencial hasta que alguien emita una.
+     */
+    @Column(name = "credential_hash", length = 64)
+    private String credentialHash;
+
+    @Column(name = "credential_issued_at")
+    private Instant credentialIssuedAt;
 }

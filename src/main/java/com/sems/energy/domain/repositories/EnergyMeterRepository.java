@@ -17,4 +17,13 @@ public interface EnergyMeterRepository {
 
     /** Medidores vigentes de una zona concreta. */
     List<EnergyMeter> findByZoneId(String zoneId);
+
+    /**
+     * El medidor que presenta esa credencial, si sigue vinculado.
+     *
+     * <p>Se busca por el hash, nunca por la clave en claro, y un medidor
+     * desvinculado no aparece: su credencial deja de valer en el momento en que
+     * se le saca de la cuenta.
+     */
+    Optional<EnergyMeter> findByCredentialHash(String credentialHash);
 }

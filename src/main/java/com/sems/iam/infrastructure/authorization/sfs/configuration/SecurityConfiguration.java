@@ -65,6 +65,12 @@ public class SecurityConfiguration {
                     // autentica por la firma del cuerpo, no por JWT. Si esta
                     // ruta exige token, los cobros nunca se confirman.
                     auth.requestMatchers("/api/v1/webhooks/**").permitAll();
+                    // Los medidores no tienen JWT: envian sus lecturas con su
+                    // propia credencial en X-Meter-Key, que el servicio de
+                    // ingesta comprueba. Exigir token aqui dejaria la ingesta
+                    // automatica sin forma de entrar, que es justamente lo que
+                    // obligaba a que las lecturas las metiera una persona.
+                    auth.requestMatchers("/api/v1/ingest/**").permitAll();
                     auth.requestMatchers(
                             "/swagger-ui/**",
                             "/webjars/**",

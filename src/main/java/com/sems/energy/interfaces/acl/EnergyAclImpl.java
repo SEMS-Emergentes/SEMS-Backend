@@ -38,6 +38,13 @@ public class EnergyAclImpl implements EnergyAcl {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<Instant> lastReadingOf(UUID deviceId) {
+        return readings.findLatestByDevice(deviceId.toString())
+                .map(com.sems.energy.domain.model.entities.EnergyReading::getTimestamp);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<DailyUsage> dailyUsage(String userId, int days) {
         List<EnergyMeter> delUsuario = meters.findByUserId(userId);
         if (delUsuario.isEmpty()) {

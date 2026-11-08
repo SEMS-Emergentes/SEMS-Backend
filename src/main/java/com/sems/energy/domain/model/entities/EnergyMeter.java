@@ -43,10 +43,24 @@ public class EnergyMeter {
     private Instant updatedAt;
     private Instant unlinkedAt;
 
+    /**
+     * Hash de la credencial con la que el propio medidor envia sus lecturas.
+     *
+     * <p>Se guarda el hash y no la clave: quien lea la base de datos no puede
+     * suplantar al medidor. La clave en claro se entrega una sola vez, al
+     * emitirla, y el sistema no vuelve a tenerla.
+     *
+     * <p>Nulo mientras nadie haya emitido una, que es el estado de todos los
+     * medidores dados de alta antes de que existiera la ingesta automatica.
+     */
+    private String credentialHash;
+    private Instant credentialIssuedAt;
+
     private EnergyMeter(UUID id, String userId, String siteId, String zoneId, String meterSerial,
                         String model, String brand, String location, MeterStatus status,
                         String firmwareVersion, double maxPowerWatts, Instant registeredAt,
-                        Instant lastSeenAt, Instant updatedAt, Instant unlinkedAt) {
+                        Instant lastSeenAt, Instant updatedAt, Instant unlinkedAt,
+                        String credentialHash, Instant credentialIssuedAt) {
         this.id = id;
         this.userId = userId;
         this.siteId = siteId;
@@ -62,6 +76,8 @@ public class EnergyMeter {
         this.lastSeenAt = lastSeenAt;
         this.updatedAt = updatedAt;
         this.unlinkedAt = unlinkedAt;
+        this.credentialHash = credentialHash;
+        this.credentialIssuedAt = credentialIssuedAt;
     }
 
     public static EnergyMeter register(String userId, String siteId, String zoneId,
@@ -82,7 +98,7 @@ public class EnergyMeter {
                 meterSerial.trim(), model, brand, location, MeterStatus.ACTIVE,
                 firmwareVersion == null ? "1.0.0" : firmwareVersion,
                 maxPowerWatts == null ? 10000.0 : maxPowerWatts,
-                now, null, now, null);
+                now, null, now, null, null, null);
     }
 
     /**
@@ -97,10 +113,11 @@ public class EnergyMeter {
                                         String location, MeterStatus status,
                                         String firmwareVersion, double maxPowerWatts,
                                         Instant registeredAt, Instant lastSeenAt, Instant updatedAt,
-                                        Instant unlinkedAt) {
+                                        Instant unlinkedAt, String credentialHash,
+                                        Instant credentialIssuedAt) {
         return new EnergyMeter(id, userId, siteId, zoneId, meterSerial, model, brand, location,
                 status, firmwareVersion, maxPowerWatts, registeredAt, lastSeenAt, updatedAt,
-                unlinkedAt);
+                unlinkedAt, credentialHash, credentialIssuedAt);
     }
 
     /**
@@ -147,6 +164,11 @@ public class EnergyMeter {
         this.status = MeterStatus.INACTIVE;
         this.unlinkedAt = Instant.now();
         this.updatedAt = this.unlinkedAt;
+        // Desvincular tiene que cortar tambien la ingesta: si la credencial
+        // sobreviviera, el aparato seguiria escribiendo lecturas en la cuenta
+        // de la que acaban de sacarlo, y nadie estaria mirando esa cuenta.
+        this.credentialHash = null;
+        this.credentialIssuedAt = null;
     }
 
     /** Vuelve a vincular un medidor desvinculado, posiblemente a otra cuenta. */
@@ -158,6 +180,26 @@ public class EnergyMeter {
         this.status = MeterStatus.ACTIVE;
         this.unlinkedAt = null;
         this.updatedAt = Instant.now();
+    }
+
+    /**
+     * Da al medidor una credencial nueva, representada por su hash.
+     *
+     * <p>Emitir otra invalida la anterior: es la unica forma de rotar la clave
+     * de un aparato que se cree comprometido, y tambien la de recuperarse de
+     * haberla perdido, porque en claro no se guarda en ninguna parte.
+     */
+    public void issueCredential(String credentialHash) {
+        if (isBlank(credentialHash)) {
+            throw AppException.validation("the credential hash is required");
+        }
+        this.credentialHash = credentialHash;
+        this.credentialIssuedAt = Instant.now();
+        this.updatedAt = this.credentialIssuedAt;
+    }
+
+    public boolean hasCredential() {
+        return this.credentialHash != null;
     }
 
     private static boolean isBlank(String value) {

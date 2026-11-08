@@ -105,7 +105,7 @@ public final class AlertAdapters {
         public InactivityRule save(InactivityRule r) {
             return toDomain(jpa.save(new InactivityRuleRow(r.getInactivityRuleId(), r.getUserId(),
                     r.getDeviceId(), r.getRuleName(), r.getMaxInactiveMinutes(), r.isActive(),
-                    r.getCreatedAt(), r.getUpdatedAt())));
+                    r.getCreatedAt(), r.getUpdatedAt(), r.getLastAlertAt())));
         }
 
         @Override
@@ -122,7 +122,7 @@ public final class AlertAdapters {
         private static InactivityRule toDomain(InactivityRuleRow r) {
             return new InactivityRule(r.getInactivityRuleId(), r.getUserId(), r.getDeviceId(),
                     r.getRuleName(), r.getMaxInactiveMinutes(), r.isActive(), r.getCreatedAt(),
-                    r.getUpdatedAt());
+                    r.getUpdatedAt(), r.getLastAlertAt());
         }
     }
 

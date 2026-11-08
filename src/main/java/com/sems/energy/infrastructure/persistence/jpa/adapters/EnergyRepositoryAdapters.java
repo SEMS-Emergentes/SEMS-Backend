@@ -60,6 +60,12 @@ public final class EnergyRepositoryAdapters {
             return jpa.findByZoneIdAndUnlinkedAtIsNullOrderByRegisteredAtDesc(zoneId).stream()
                     .map(EnergyMapper::toDomain).toList();
         }
+
+        @Override
+        public Optional<EnergyMeter> findByCredentialHash(String credentialHash) {
+            return jpa.findByCredentialHashAndUnlinkedAtIsNull(credentialHash)
+                    .map(EnergyMapper::toDomain);
+        }
     }
 
     @Repository
@@ -110,6 +116,11 @@ public final class EnergyRepositoryAdapters {
         @Override
         public Optional<EnergyReading> findLatestByMeter(String meterId) {
             return jpa.findFirstByMeterIdOrderByTimestampDesc(meterId).map(EnergyMapper::toDomain);
+        }
+
+        @Override
+        public boolean existsByMeterAndTimestamp(String meterId, Instant timestamp) {
+            return jpa.existsByMeterIdAndTimestamp(meterId, timestamp);
         }
 
         @Override
