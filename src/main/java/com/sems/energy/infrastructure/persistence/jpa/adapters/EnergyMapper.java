@@ -14,14 +14,16 @@ public final class EnergyMapper {
         return new EnergyMeterJpaEntity(m.getId(), m.getUserId(), m.getSiteId(), m.getZoneId(),
                 m.getMeterSerial(), m.getModel(), m.getBrand(), m.getLocation(), m.getStatus(),
                 m.getFirmwareVersion(), m.getMaxPowerWatts(), m.getRegisteredAt(),
-                m.getLastSeenAt(), m.getUpdatedAt(), m.getUnlinkedAt());
+                m.getLastSeenAt(), m.getUpdatedAt(), m.getUnlinkedAt(), m.getCredentialHash(),
+                m.getCredentialIssuedAt());
     }
 
     public static EnergyMeter toDomain(EnergyMeterJpaEntity r) {
         return EnergyMeter.rehydrate(r.getId(), r.getUserId(), r.getSiteId(), r.getZoneId(),
                 r.getMeterSerial(), r.getModel(), r.getBrand(), r.getLocation(), r.getStatus(),
                 r.getFirmwareVersion(), r.getMaxPowerWatts(), r.getRegisteredAt(),
-                r.getLastSeenAt(), r.getUpdatedAt(), r.getUnlinkedAt());
+                r.getLastSeenAt(), r.getUpdatedAt(), r.getUnlinkedAt(), r.getCredentialHash(),
+                r.getCredentialIssuedAt());
     }
 
     public static EnergyReadingJpaEntity toEntity(EnergyReading e) {
