@@ -7,6 +7,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -302,6 +309,47 @@ class IngestaDeMedidorTest {
         JsonNode reenvio = cuerpo(ingerir(200, clave, lote));
         assertThat(reenvio.get("accepted").asInt()).isZero();
         assertThat(reenvio.get("duplicated").asInt()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("el mismo lote enviado a la vez por varios caminos entra una sola vez")
+    void reintentosSimultaneosNoDuplican() throws Exception {
+        // Un medidor que no recibe la respuesta reintenta mientras el primer
+        // envio sigue en curso. Comprobar y escribir por separado dejaba pasar a
+        // los dos; aqui se lanzan ocho a la vez contra el mismo lote.
+        int envios = 8;
+        int lecturas = 5;
+        StringBuilder cuerpo = new StringBuilder("{\"readings\":[");
+        for (int i = 0; i < lecturas; i++) {
+            cuerpo.append(i == 0 ? "" : ",").append("""
+                    {"energy_kwh":1.0,"power_watts":1000,"voltage":220,"current":5,
+                     "frequency":60,"timestamp":"%s"}""".formatted(hace(200 + i)));
+        }
+        String lote = cuerpo.append("]}").toString();
+
+        ExecutorService hilos = Executors.newFixedThreadPool(envios);
+        CountDownLatch salida = new CountDownLatch(1);
+        List<Future<JsonNode>> resultados = new ArrayList<>();
+        for (int i = 0; i < envios; i++) {
+            resultados.add(hilos.submit(() -> {
+                salida.await();
+                return cuerpo(ingerir(200, clave, lote));
+            }));
+        }
+        salida.countDown();
+
+        int aceptadas = 0;
+        int repetidas = 0;
+        for (Future<JsonNode> resultado : resultados) {
+            JsonNode r = resultado.get(60, TimeUnit.SECONDS);
+            aceptadas += r.get("accepted").asInt();
+            repetidas += r.get("duplicated").asInt();
+            assertThat(r.get("rejected").size()).isZero();
+        }
+        hilos.shutdown();
+
+        assertThat(aceptadas).as("cada lectura entra exactamente una vez").isEqualTo(lecturas);
+        assertThat(repetidas).isEqualTo(lecturas * (envios - 1));
     }
 
     private JsonNode registrar(String correo) throws Exception {

@@ -39,6 +39,11 @@ public final class EnergyRepositoryAdapters {
         }
 
         @Override
+        public void lockForWriting(UUID id) {
+            jpa.lockById(id);
+        }
+
+        @Override
         public Optional<EnergyMeter> findBySerial(String meterSerial) {
             return jpa.findByMeterSerial(meterSerial).map(EnergyMapper::toDomain);
         }
