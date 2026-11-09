@@ -1,6 +1,7 @@
 package com.sems.energy.application;
 
 import com.sems.energy.domain.model.entities.EnergyMeter;
+import com.sems.energy.domain.repositories.EnergyMeterRepository;
 import com.sems.energy.domain.repositories.EnergyReadingRepository;
 import com.sems.shared.errors.AppException;
 import java.time.Instant;
@@ -9,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Entrada de lecturas enviadas por el propio medidor.
@@ -50,12 +52,14 @@ public class ReadingIngestionService {
     private final MeterCredentialService credenciales;
     private final EnergyCommandService commands;
     private final EnergyReadingRepository readings;
+    private final EnergyMeterRepository meters;
+    private final TransactionTemplate transaccion;
 
     /**
      * Registra el lote que envia un medidor autenticado por su credencial.
      *
-     * <p>No es transaccional a proposito: {@code recordReading} ya abre la suya
-     * por lectura, y envolverlas todas en una sola haria que el rechazo de una
+     * <p>No es transaccional a proposito: cada lectura va en su propia
+     * transaccion, y envolverlas todas en una sola haria que el rechazo de una
      * marcase la transaccion compartida para deshacerse, tirando tambien las
      * que si eran validas.
      */
@@ -83,24 +87,12 @@ public class ReadingIngestionService {
             // hora es comun, y rechazarle el dato seria peor que fecharlo aqui.
             Instant marca = lectura.timestamp() == null ? Instant.now() : lectura.timestamp();
 
-            // Reenviar un lote ya recibido no duplica el consumo. La lectura la
-            // identifican los tres juntos: medidor, equipo y marca de tiempo.
-            // Con solo medidor y marca, un medidor que reporta varios equipos a
-            // la misma hora veia como se guardaba el primero y los demas se
-            // contaban como repetidos; la respuesta seguia siendo 200, asi que
-            // el aparato no reenviaba nada y ese consumo se perdia para siempre.
-            if (readings.existsByMeterDeviceAndTimestamp(meterId, lectura.deviceId(), marca)) {
-                repetidas++;
-                continue;
-            }
             try {
-                commands.recordReading(medidor.getUserId(), meterId, lectura.deviceId(),
-                        valor(lectura.powerWatts()), valor(lectura.voltage()),
-                        valor(lectura.current()), frecuencia(lectura.frequency()),
-                        valor(lectura.energyKwh()), marca,
-                        lectura.readingType() == null ? "DEVICE" : lectura.readingType(),
-                        lectura.phase());
-                aceptadas++;
+                if (registrar(medidor, meterId, lectura, marca)) {
+                    aceptadas++;
+                } else {
+                    repetidas++;
+                }
             } catch (AppException e) {
                 // El resto del lote sigue su curso: el aparato no puede hacer
                 // nada con un error que afecta a una sola de sus lecturas, pero
@@ -109,6 +101,41 @@ public class ReadingIngestionService {
             }
         }
         return new IngestionResult(medidor.getId(), aceptadas, repetidas, List.copyOf(rechazadas));
+    }
+
+    /**
+     * Guarda una lectura si no estaba ya; devuelve si entro.
+     *
+     * <p>Comprobar y escribir van en la misma transaccion y con el medidor
+     * reservado. Sueltos dejaban un hueco: un medidor que no recibe la
+     * respuesta reintenta el lote mientras el primer envio sigue en curso, los
+     * dos comprueban antes de que ninguno haya escrito y el consumo entra dos
+     * veces. La reserva es por medidor, asi que no frena a los demas.
+     *
+     * <p>La lectura la identifican los tres juntos: medidor, equipo y marca de
+     * tiempo. Con solo medidor y marca, un medidor que reporta varios equipos a
+     * la misma hora veia como se guardaba el primero y los demas se contaban
+     * como repetidos.
+     *
+     * <p>No se resuelve con una restriccion unica en la tabla porque el equipo
+     * es nulo en las lecturas del local entero, y para la base dos nulos nunca
+     * son iguales.
+     */
+    private boolean registrar(EnergyMeter medidor, String meterId, IncomingReading lectura,
+            Instant marca) {
+        return Boolean.TRUE.equals(transaccion.execute(estado -> {
+            meters.lockForWriting(medidor.getId());
+            if (readings.existsByMeterDeviceAndTimestamp(meterId, lectura.deviceId(), marca)) {
+                return false;
+            }
+            commands.recordReading(medidor.getUserId(), meterId, lectura.deviceId(),
+                    valor(lectura.powerWatts()), valor(lectura.voltage()),
+                    valor(lectura.current()), frecuencia(lectura.frequency()),
+                    valor(lectura.energyKwh()), marca,
+                    lectura.readingType() == null ? "DEVICE" : lectura.readingType(),
+                    lectura.phase());
+            return true;
+        }));
     }
 
     private static double valor(Double medida) {

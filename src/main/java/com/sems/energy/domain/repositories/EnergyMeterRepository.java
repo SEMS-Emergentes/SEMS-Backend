@@ -26,4 +26,13 @@ public interface EnergyMeterRepository {
      * se le saca de la cuenta.
      */
     Optional<EnergyMeter> findByCredentialHash(String credentialHash);
+
+    /**
+     * Reserva el medidor para quien llama hasta que acabe su transaccion.
+     *
+     * <p>Quien registra una lectura comprueba primero si ya existe y despues la
+     * inserta; con el medidor reservado, dos envios del mismo lote pasan por
+     * ese tramo de uno en uno y el segundo ya encuentra lo que dejo el primero.
+     */
+    void lockForWriting(UUID id);
 }
