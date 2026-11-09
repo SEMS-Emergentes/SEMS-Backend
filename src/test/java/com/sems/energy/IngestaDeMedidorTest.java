@@ -266,6 +266,44 @@ class IngestaDeMedidorTest {
         return Instant.now().truncatedTo(ChronoUnit.SECONDS).minus(Duration.ofMinutes(minutos));
     }
 
+    @Test
+    @DisplayName("dos equipos medidos a la misma hora entran los dos")
+    void dosEquiposEnLaMismaMarca() throws Exception {
+        // Un medidor de local reparte su consumo entre los equipos y los manda
+        // con la misma marca de tiempo, que es lo normal, no una rareza. Con la
+        // clave de repeticion puesta solo en (medidor, marca), el primero
+        // entraba y el resto se contaban como repetidos: el lote respondia 200,
+        // el aparato no reenviaba nada y ese consumo no volvia a aparecer.
+        String camara = campo(201, "deviceId", post("/api/v1/device-management/devices", """
+                {"externalDeviceCode":"ING-FRIO","userId":"%s","siteId":"%s","deviceName":"Camara",
+                 "deviceType":"REFRIGERATION","connectionProtocol":"WIFI"}"""
+                .formatted(userId, local)));
+        String aire = campo(201, "deviceId", post("/api/v1/device-management/devices", """
+                {"externalDeviceCode":"ING-AIRE","userId":"%s","siteId":"%s","deviceName":"Aire",
+                 "deviceType":"HVAC","connectionProtocol":"WIFI"}""".formatted(userId, local)));
+
+        Instant marca = hace(77);
+        String lote = """
+                {"readings":[
+                 {"energy_kwh":3.0,"power_watts":2000,"voltage":220,"current":9,"frequency":60,
+                  "timestamp":"%s","device_id":"%s"},
+                 {"energy_kwh":5.0,"power_watts":3000,"voltage":220,"current":9,"frequency":60,
+                  "timestamp":"%s","device_id":"%s"},
+                 {"energy_kwh":8.0,"power_watts":5000,"voltage":220,"current":9,"frequency":60,
+                  "timestamp":"%s"}]}""".formatted(marca, camara, marca, aire, marca);
+
+        JsonNode entrada = cuerpo(ingerir(200, clave, lote));
+        assertThat(entrada.get("accepted").asInt())
+                .as("las dos del equipo mas la del local entera")
+                .isEqualTo(3);
+        assertThat(entrada.get("duplicated").asInt()).isZero();
+
+        // Y el reenvio del mismo lote sigue sin duplicar nada.
+        JsonNode reenvio = cuerpo(ingerir(200, clave, lote));
+        assertThat(reenvio.get("accepted").asInt()).isZero();
+        assertThat(reenvio.get("duplicated").asInt()).isEqualTo(3);
+    }
+
     private JsonNode registrar(String correo) throws Exception {
         MvcResult res = mvc.perform(MockMvcRequestBuilders.post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)

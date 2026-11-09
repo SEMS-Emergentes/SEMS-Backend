@@ -119,8 +119,11 @@ public final class EnergyRepositoryAdapters {
         }
 
         @Override
-        public boolean existsByMeterAndTimestamp(String meterId, Instant timestamp) {
-            return jpa.existsByMeterIdAndTimestamp(meterId, timestamp);
+        public boolean existsByMeterDeviceAndTimestamp(String meterId, String deviceId,
+                Instant timestamp) {
+            return deviceId == null
+                    ? jpa.existsByMeterIdAndDeviceIdIsNullAndTimestamp(meterId, timestamp)
+                    : jpa.existsByMeterIdAndDeviceIdAndTimestamp(meterId, deviceId, timestamp);
         }
 
         @Override
