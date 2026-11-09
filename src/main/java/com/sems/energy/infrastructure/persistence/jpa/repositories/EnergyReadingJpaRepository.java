@@ -25,5 +25,14 @@ public interface EnergyReadingJpaRepository extends JpaRepository<EnergyReadingJ
 
     Optional<EnergyReadingJpaEntity> findFirstByDeviceIdOrderByTimestampDesc(String deviceId);
 
-    boolean existsByMeterIdAndTimestamp(String meterId, Instant timestamp);
+    boolean existsByMeterIdAndDeviceIdAndTimestamp(String meterId, String deviceId, Instant timestamp);
+
+    /**
+     * Para la lectura del medidor que no se atribuye a ningun equipo.
+     *
+     * <p>Hace falta aparte porque {@code deviceId = null} en SQL no iguala a
+     * nada, ni a otro nulo: la consulta derivada con el parametro a nulo no
+     * encontraria nunca la fila que si existe.
+     */
+    boolean existsByMeterIdAndDeviceIdIsNullAndTimestamp(String meterId, Instant timestamp);
 }

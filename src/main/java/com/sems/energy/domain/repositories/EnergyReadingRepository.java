@@ -32,6 +32,6 @@ public interface EnergyReadingRepository {
      * conexion reintenta el mismo lote al recuperarla, y sin esta comprobacion
      * el consumo del dia se contaria dos veces.
      */
-    boolean existsByMeterAndTimestamp(String meterId, Instant timestamp);
+    boolean existsByMeterDeviceAndTimestamp(String meterId, String deviceId, Instant timestamp);
     Optional<EnergyReading> findLatestByDevice(String deviceId);
 }
