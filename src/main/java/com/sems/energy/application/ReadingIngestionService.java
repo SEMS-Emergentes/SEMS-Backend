@@ -83,9 +83,13 @@ public class ReadingIngestionService {
             // hora es comun, y rechazarle el dato seria peor que fecharlo aqui.
             Instant marca = lectura.timestamp() == null ? Instant.now() : lectura.timestamp();
 
-            // Reenviar un lote ya recibido no duplica el consumo: la pareja
-            // medidor y marca de tiempo identifica la lectura.
-            if (readings.existsByMeterAndTimestamp(meterId, marca)) {
+            // Reenviar un lote ya recibido no duplica el consumo. La lectura la
+            // identifican los tres juntos: medidor, equipo y marca de tiempo.
+            // Con solo medidor y marca, un medidor que reporta varios equipos a
+            // la misma hora veia como se guardaba el primero y los demas se
+            // contaban como repetidos; la respuesta seguia siendo 200, asi que
+            // el aparato no reenviaba nada y ese consumo se perdia para siempre.
+            if (readings.existsByMeterDeviceAndTimestamp(meterId, lectura.deviceId(), marca)) {
                 repetidas++;
                 continue;
             }
