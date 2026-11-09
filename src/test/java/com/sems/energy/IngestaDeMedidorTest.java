@@ -84,6 +84,21 @@ class IngestaDeMedidorTest {
         JsonNode ficha = cuerpo(ejecutar(200,
                 MockMvcRequestBuilders.get("/api/v1/energy-meters/" + medidor)));
         assertThat(ficha.toString()).doesNotContain("api_key").doesNotContain("sems_mk_");
+
+        // Lo que si publica es cuando se emitio, que es lo que necesita la
+        // interfaz para distinguir entre emitir la primera y rotar la que hay.
+        assertThat(ficha.get("credential_issued_at").asText()).isNotBlank();
+        JsonNode reciente = cuerpo(ejecutar(201, post(
+                "/api/v1/energy-meters/" + nuevoMedidor("ING-SINCLAVE") + "/credential", "")));
+        assertThat(reciente.get("api_key").asText()).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("un medidor sin credencial no informa fecha de emision")
+    void sinCredencialNoHayFecha() throws Exception {
+        JsonNode ficha = cuerpo(ejecutar(200, MockMvcRequestBuilders
+                .get("/api/v1/energy-meters/" + nuevoMedidor("ING-VIRGEN"))));
+        assertThat(ficha.has("credential_issued_at")).isFalse();
     }
 
     @Test
