@@ -122,6 +122,33 @@ public class PaymentCommandService {
     }
 
     /**
+     * Registra un cobro hecho con el procesador simulado.
+     *
+     * <p>Tambien se guarda el rechazado: el historial tiene que mostrar el
+     * intento fallido, igual que lo mostraria un cobro real.
+     */
+    @Transactional
+    public PaymentResult recordSimulatedPayment(UUID subscriptionId, UUID userId, double amount,
+                                                String currency, String paymentMethodLabel,
+                                                boolean approved) {
+        Payment payment = Payment.create(subscriptionId, userId, null, amount, currency,
+                paymentMethodLabel);
+        if (approved) {
+            payment.markProcessed(null);
+        } else {
+            payment.markFailed(null);
+        }
+        Payment saved = payments.save(payment);
+
+        Invoice invoice = null;
+        if (saved.isPaid()) {
+            invoice = invoices.save(Invoice.issueFor(saved.getPaymentId(), saved.getAmount(), ""));
+            publishProcessed(saved);
+        }
+        return new PaymentResult(saved, invoice);
+    }
+
+    /**
      * Publica el cobro completado.
      *
      * <p>Lo escucha el modulo de notificaciones para enviar el comprobante por

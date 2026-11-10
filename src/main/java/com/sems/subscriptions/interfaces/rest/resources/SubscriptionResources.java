@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import com.sems.payments.interfaces.acl.PaymentsAcl;
 import com.sems.subscriptions.domain.model.entities.*;
 import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
@@ -32,6 +33,26 @@ public final class SubscriptionResources {
             @NotBlank(message = "is required") String userId,
             @NotBlank(message = "is required") String planId,
             String stripeCustomerId) {
+    }
+
+    /**
+     * Compra de un plan. La tarjeta solo hace falta si el plan cuesta; el
+     * importe no viaja en la peticion porque lo fija el plan guardado.
+     */
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record PurchaseRequest(
+            @NotBlank(message = "is required") String userId,
+            @NotBlank(message = "is required") String planId,
+            String cardNumber,
+            Integer expMonth,
+            Integer expYear,
+            String cvc) {
+
+        // Sin esto, cualquier log de la peticion escribiria el numero y el CVC.
+        @Override
+        public String toString() {
+            return "PurchaseRequest[userId=" + userId + ", planId=" + planId + ", card=****]";
+        }
     }
 
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
@@ -92,5 +113,25 @@ public final class SubscriptionResources {
                     s.getPlanId().toString(), s.getStatus().name(), s.getStartDate(),
                     s.getEndDate(), s.getStripeSubscriptionId(), s.getCreatedAt());
         }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record ChargeResource(
+            @JsonProperty("PaymentID") String paymentId,
+            @JsonProperty("Status") String status,
+            @JsonProperty("Amount") double amount,
+            @JsonProperty("Currency") String currency,
+            @JsonProperty("InvoiceNumber") String invoiceNumber) {
+
+        public static ChargeResource from(PaymentsAcl.ChargeReceipt c) {
+            return c == null ? null : new ChargeResource(c.paymentId().toString(), c.status(),
+                    c.amount(), c.currency(), c.invoiceNumber());
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record PurchaseResource(
+            @JsonProperty("Subscription") SubscriptionResource subscription,
+            @JsonProperty("Payment") ChargeResource payment) {
     }
 }

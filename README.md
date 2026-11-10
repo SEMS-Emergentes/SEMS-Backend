@@ -76,5 +76,8 @@ docker run --env-file .env -p 8080:8080 sems-backend
 - El health check del proveedor debe apuntar a `/actuator/health`.
 - La ruta `/api/v1/webhooks/**` esta abierta sin token: Stripe se autentica por
   la firma del cuerpo. Si se cierra, ningun cobro se confirma.
-- Los planes Free, Plus y Pro se cargan solos la primera vez que arranca contra
-  una base vacia.
+- Los planes Starter, Business y Enterprise se cargan solos la primera vez que
+  arranca contra una base vacia.
+- Los cobros son simulados: `POST /api/v1/subscriptions/purchase` valida la
+  tarjeta y la "cobra" sin pasarela. `4242 4242 4242 4242` se aprueba y
+  `4000 0000 0000 0002` se rechaza. Un plan de pago solo se activa por esa ruta.

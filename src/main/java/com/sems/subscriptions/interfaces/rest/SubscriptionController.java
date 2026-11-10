@@ -1,5 +1,7 @@
 package com.sems.subscriptions.interfaces.rest;
 
+import com.sems.payments.interfaces.acl.PaymentsAcl;
+import com.sems.shared.errors.ErrorResponse;
 import com.sems.subscriptions.application.SubscriptionService;
 import com.sems.subscriptions.interfaces.rest.resources.SubscriptionResources.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -67,6 +69,28 @@ public class SubscriptionController {
         var subscription = service.create(request.userId(), UUID.fromString(request.planId()), null);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(SubscriptionResource.from(subscription));
+    }
+
+    /**
+     * Contrata un plan cobrandolo con el procesador simulado.
+     *
+     * <p>Un rechazo responde 402 con el motivo, como lo haria una pasarela, y
+     * deja el plan como estaba.
+     */
+    @Operation(summary = "Purchases a plan, charging the card when the plan is paid")
+    @PreAuthorize("@accesoUsuario.esMio(#request.userId())")
+    @PostMapping("/subscriptions/purchase")
+    public ResponseEntity<?> purchase(@Valid @RequestBody PurchaseRequest request) {
+        var card = request.cardNumber() == null ? null : new PaymentsAcl.SimulatedCard(
+                request.cardNumber(), request.expMonth(), request.expYear(), request.cvc());
+        var result = service.purchase(request.userId(), UUID.fromString(request.planId()), card);
+        if (result.declined()) {
+            return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
+                    .body(new ErrorResponse("PAYMENT_DECLINED", result.declineReason()));
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(new PurchaseResource(
+                SubscriptionResource.from(result.subscription()),
+                ChargeResource.from(result.charge())));
     }
 
     @Operation(summary = "Cancels a subscription")
