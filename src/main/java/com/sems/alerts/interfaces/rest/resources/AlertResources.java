@@ -54,7 +54,11 @@ public final class AlertResources {
             @NotBlank(message = "is required") String deviceId,
             @NotBlank(message = "is required") String ruleName,
             int maxInactiveMinutes,
-            boolean active) {
+            // Nulo cuenta como activa, igual que en umbrales y reglas de
+            // demanda. Con un boolean primitivo, un cliente que no mandara el
+            // campo creaba una regla apagada que nunca avisaba, y no hay
+            // ninguna ruta para encenderla despues.
+            Boolean active) {
     }
 
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
