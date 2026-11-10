@@ -56,10 +56,10 @@ public class InactivityRule {
     }
 
     public static InactivityRule create(UUID userId, UUID deviceId, String ruleName,
-                                        int maxInactiveMinutes, boolean active) {
+                                        int maxInactiveMinutes, Boolean active) {
         Instant now = Instant.now();
         return new InactivityRule(UUID.randomUUID(), userId, deviceId, ruleName,
-                maxInactiveMinutes, active, now, now);
+                maxInactiveMinutes, active == null || active, now, now);
     }
 
     /**
