@@ -135,6 +135,11 @@ public final class EnergyRepositoryAdapters {
         public Optional<EnergyReading> findLatestByDevice(String deviceId) {
             return jpa.findFirstByDeviceIdOrderByTimestampDesc(deviceId).map(EnergyMapper::toDomain);
         }
+
+        @Override
+        public double sumKwhByDevice(String deviceId, Instant from, Instant to) {
+            return jpa.sumEnergyKwhByDevice(deviceId, from, to);
+        }
     }
 
     @Repository

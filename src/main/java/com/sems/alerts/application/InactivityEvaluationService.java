@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -71,13 +72,13 @@ public class InactivityEvaluationService {
 
             long minutos = Duration.between(ultima, ahora).toMinutes();
             String nombre = nombreDe(nombres, regla);
-            String mensaje = String.format(
-                    "%s has not reported for %d minutes, over the %d configured. "
-                            + "Its consumption is not being measured.",
+            String mensaje = String.format(Locale.ROOT,
+                    "%s no reporta desde hace %d minutos, más de los %d configurados. "
+                            + "Su consumo no se está midiendo.",
                     nombre, minutos, regla.getMaxInactiveMinutes());
 
             levantadas.add(alertas.createAlert(regla.getUserId(), regla.getDeviceId(), null,
-                    regla.getInactivityRuleId(), "INACTIVITY", "Device stopped reporting",
+                    regla.getInactivityRuleId(), "INACTIVITY", "Equipo sin reportar",
                     mensaje, "WARNING", null, ahora));
         }
         return levantadas;

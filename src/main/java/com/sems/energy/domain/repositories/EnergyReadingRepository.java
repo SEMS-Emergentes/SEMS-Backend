@@ -34,4 +34,7 @@ public interface EnergyReadingRepository {
      */
     boolean existsByMeterDeviceAndTimestamp(String meterId, String deviceId, Instant timestamp);
     Optional<EnergyReading> findLatestByDevice(String deviceId);
+
+    /** Energia que registro un equipo entre dos instantes, [desde, hasta). */
+    double sumKwhByDevice(String deviceId, Instant from, Instant to);
 }

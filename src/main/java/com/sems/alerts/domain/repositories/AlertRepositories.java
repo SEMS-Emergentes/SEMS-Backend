@@ -16,6 +16,8 @@ public final class AlertRepositories {
         Optional<Alert> findById(UUID alertId);
         List<Alert> findAll();
         List<Alert> findByUserId(UUID userId);
+        /** Si el umbral ya levanto algun aviso entre dos instantes, [desde, hasta). */
+        boolean existsForThresholdBetween(UUID thresholdId, java.time.Instant from, java.time.Instant to);
     }
 
     public interface ThresholdRepository {

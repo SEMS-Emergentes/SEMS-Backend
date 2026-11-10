@@ -12,6 +12,7 @@ import com.sems.organizations.interfaces.acl.OrganizationsAcl;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -120,16 +121,18 @@ public class AlertCommandService {
             String severidad;
 
             if (nivel == DemandLevel.WARNING) {
-                titulo = "Demand close to the contracted limit";
-                mensaje = String.format(
-                        "The site is at %.2f kW of %.2f kW contracted. %.2f kW of headroom left.",
+                // En espanol, como el resto de lo que lee el cliente: la bandeja
+                // mostraba los avisos en ingles dentro de una interfaz en espanol.
+                titulo = "Demanda cerca del límite contratado";
+                mensaje = String.format(Locale.ROOT,
+                        "El local está en %.2f kW de %.2f kW contratados. Quedan %.2f kW de margen.",
                         demandaKw, regla.getContractedPowerKw(), margen);
                 severidad = "WARNING";
             } else {
-                titulo = "Demand above the contracted limit";
-                mensaje = String.format(
-                        "The site reached %.2f kW, %.2f kW above the %.2f kW contracted. "
-                                + "The excess power charge applies to the whole month.",
+                titulo = "Demanda por encima de lo contratado";
+                mensaje = String.format(Locale.ROOT,
+                        "El local llegó a %.2f kW, %.2f kW por encima de los %.2f kW contratados. "
+                                + "El cargo por exceso de potencia se aplica a todo el mes.",
                         demandaKw, Math.abs(margen), regla.getContractedPowerKw());
                 severidad = "CRITICAL";
             }

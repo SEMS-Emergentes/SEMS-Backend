@@ -45,6 +45,13 @@ public final class AlertAdapters {
                     .map(AlertAdapter::toDomain).toList();
         }
 
+        @Override
+        public boolean existsForThresholdBetween(UUID thresholdId, java.time.Instant from,
+                                                 java.time.Instant to) {
+            return jpa.existsByThresholdIdAndTriggeredAtGreaterThanEqualAndTriggeredAtLessThan(
+                    thresholdId, from, to);
+        }
+
         private static Alert toDomain(AlertRow r) {
             return new Alert(r.getAlertId(), r.getUserId(), r.getDeviceId(), r.getThresholdId(),
                     r.getInactivityRuleId(), r.getAlertType(), r.getTitle(), r.getMessage(),
