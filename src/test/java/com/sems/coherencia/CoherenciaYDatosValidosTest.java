@@ -195,9 +195,13 @@ class CoherenciaYDatosValidosTest {
         ejecutarCon(suyo, 409, post("/api/v1/subscriptions", """
                 {"user_id":"%s","plan_id":"%s"}""".formatted(suId, business)));
 
-        // Cambiar de plan sigue siendo la operacion correcta.
-        ejecutarCon(suyo, 200, patch("/api/v1/subscriptions/" + sub + "/change-plan", """
+        // Pasar a un plan de pago es una compra: el cambio directo ya no lo
+        // activa sin cobrar.
+        ejecutarCon(suyo, 409, patch("/api/v1/subscriptions/" + sub + "/change-plan", """
                 {"new_plan_id":"%s"}""".formatted(business)));
+        ejecutarCon(suyo, 201, post("/api/v1/subscriptions/purchase", """
+                {"user_id":"%s","plan_id":"%s","card_number":"4242 4242 4242 4242",
+                 "exp_month":12,"exp_year":2099,"cvc":"123"}""".formatted(suId, business)));
     }
 
     @Test
