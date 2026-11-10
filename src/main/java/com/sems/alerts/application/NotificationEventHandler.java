@@ -1,5 +1,7 @@
 package com.sems.alerts.application;
 
+import com.sems.alerts.domain.model.entities.NotificationPreference;
+import com.sems.alerts.domain.repositories.AlertRepositories.NotificationPreferenceRepository;
 import com.sems.iam.interfaces.acl.IamAcl;
 import com.sems.shared.events.DomainEvents;
 import java.util.UUID;
@@ -33,6 +35,7 @@ public class NotificationEventHandler {
 
     private final NotificationService notifications;
     private final IamAcl iam;
+    private final NotificationPreferenceRepository preferencias;
 
     @Value("${service.public-base-url:}")
     private String appBaseUrl;
@@ -41,16 +44,16 @@ public class NotificationEventHandler {
     @TransactionalEventListener
     public void onUserRegistered(DomainEvents.UserRegistered event) {
         notifications.sendEmail(null, event.emailAddress(),
-                "Welcome to SEMS",
+                "Bienvenido a SEMS",
                 """
-                Hello,
+                Hola,
 
-                Your SEMS account is ready. You can now link your meters and start
-                seeing where your electricity bill actually goes.
+                Tu cuenta de SEMS está lista. Ya puedes vincular tus medidores y ver
+                en qué se va tu recibo de luz.
 
-                Sign in here: %s
+                Ingresa aquí: %s
 
-                The SEMS team
+                El equipo de SEMS
                 """.formatted(appBaseUrl));
     }
 
@@ -65,17 +68,17 @@ public class NotificationEventHandler {
     @TransactionalEventListener
     public void onVerificationRequested(DomainEvents.VerificationRequested event) {
         notifications.sendEmail(null, event.emailAddress(),
-                "Verify your SEMS account",
+                "Verifica tu cuenta de SEMS",
                 """
-                Hello,
+                Hola,
 
-                Use this code to activate your account:
+                Usa este código para activar tu cuenta:
 
                     %s
 
-                Or open this link directly: %s/verify?token=%s
+                O abre directamente este enlace: %s/verify?token=%s
 
-                If this wasn't you, please ignore this message.
+                Si no fuiste tú, ignora este mensaje.
                 """.formatted(event.token(), appBaseUrl, event.token()));
     }
 
@@ -83,16 +86,16 @@ public class NotificationEventHandler {
     @TransactionalEventListener
     public void onPasswordResetRequested(DomainEvents.PasswordResetRequested event) {
         notifications.sendEmail(null, event.emailAddress(),
-                "Reset your SEMS password",
+                "Restablece tu contraseña de SEMS",
                 """
-                Hello,
+                Hola,
 
-                We received a request to change your password. Use this link:
+                Recibimos un pedido para cambiar tu contraseña. Usa este enlace:
 
                     %s/reset-password?token=%s
 
-                The link expires in one hour. If this wasn't you, ignore this
-                message and your password will stay the same.
+                El enlace vence en una hora. Si no fuiste tú, ignora este mensaje
+                y tu contraseña seguirá igual.
                 """.formatted(appBaseUrl, event.token()));
     }
 
@@ -102,19 +105,19 @@ public class NotificationEventHandler {
     public void onPaymentProcessed(DomainEvents.PaymentProcessed event) {
         resolveEmail(event.userId()).ifPresent(email ->
                 notifications.sendEmail(null, email,
-                        "SEMS payment receipt",
+                        "Comprobante de pago de SEMS",
                         """
-                        Hello,
+                        Hola,
 
-                        Your payment was recorded successfully.
+                        Registramos tu pago.
 
-                            Amount:       %s %s
-                            Reference:    %s
-                            Status:       %s
+                            Importe:      %s %s
+                            Referencia:   %s
+                            Estado:       %s
 
-                        You can see the details at %s/subscription
+                        Puedes ver el detalle en %s/subscription
 
-                        Thank you for using SEMS.
+                        Gracias por usar SEMS.
                         """.formatted(event.amount(), event.currency().toUpperCase(),
                                 event.paymentId(), event.status(), appBaseUrl)));
     }
@@ -123,18 +126,43 @@ public class NotificationEventHandler {
     @Async
     @TransactionalEventListener
     public void onAlertTriggered(DomainEvents.AlertTriggered event) {
+        // La preferencia de correo se guardaba pero nadie la consultaba: apagarla
+        // en la pantalla de Alertas no cambiaba nada y los avisos seguian
+        // llegando. Sin preferencia guardada se envia, como hasta ahora.
+        if (!correoActivado(event.userId())) {
+            return;
+        }
         resolveEmail(event.userId()).ifPresent(email ->
                 notifications.sendEmail(event.alertId(), email,
-                        "Consumption alert at your site",
+                        "Alerta de consumo en tu local",
                         """
-                        Hello,
+                        Hola,
 
                         %s
 
-                        Severity: %s
+                        Severidad: %s
 
-                        See the details at %s/alerts
-                        """.formatted(event.message(), event.severity(), appBaseUrl)));
+                        Mira el detalle en %s/alerts
+                        """.formatted(event.message(), severidad(event.severity()), appBaseUrl)));
+    }
+
+    // Las severidades llegan como codigos ("high", "CRITICAL", "WARNING"); el
+    // correo es para una persona, no para otro sistema.
+    private static String severidad(String codigo) {
+        return switch (String.valueOf(codigo).toLowerCase()) {
+            case "critical", "high" -> "Alta";
+            case "warning", "medium" -> "Media";
+            case "low", "info" -> "Baja";
+            default -> String.valueOf(codigo);
+        };
+    }
+
+    private boolean correoActivado(UUID userId) {
+        return preferencias.findByUserId(userId).stream()
+                .filter(p -> NotificationPreference.CHANNEL_EMAIL.equalsIgnoreCase(p.getChannel()))
+                .findFirst()
+                .map(NotificationPreference::isEnabled)
+                .orElse(true);
     }
 
     private java.util.Optional<String> resolveEmail(UUID userId) {
