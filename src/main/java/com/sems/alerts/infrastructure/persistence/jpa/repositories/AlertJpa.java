@@ -1,6 +1,7 @@
 package com.sems.alerts.infrastructure.persistence.jpa.repositories;
 
 import com.sems.alerts.infrastructure.persistence.jpa.entities.AlertJpaEntities.*;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,5 +16,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface AlertJpa extends JpaRepository<AlertRow, UUID> {
         List<AlertRow> findByUserIdOrderByTriggeredAtDesc(UUID userId);
         List<AlertRow> findAllByOrderByTriggeredAtDesc();
+        boolean existsByThresholdIdAndTriggeredAtGreaterThanEqualAndTriggeredAtLessThan(
+                UUID thresholdId, Instant from, Instant to);
     
 }

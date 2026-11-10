@@ -8,6 +8,8 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface EnergyReadingJpaRepository extends JpaRepository<EnergyReadingJpaEntity, UUID> {
 
@@ -26,6 +28,11 @@ public interface EnergyReadingJpaRepository extends JpaRepository<EnergyReadingJ
     Optional<EnergyReadingJpaEntity> findFirstByDeviceIdOrderByTimestampDesc(String deviceId);
 
     boolean existsByMeterIdAndDeviceIdAndTimestamp(String meterId, String deviceId, Instant timestamp);
+
+    @Query("select coalesce(sum(r.energyKwh), 0) from EnergyReadingJpaEntity r "
+            + "where r.deviceId = :deviceId and r.timestamp >= :from and r.timestamp < :to")
+    double sumEnergyKwhByDevice(@Param("deviceId") String deviceId, @Param("from") Instant from,
+                                @Param("to") Instant to);
 
     /**
      * Para la lectura del medidor que no se atribuye a ningun equipo.

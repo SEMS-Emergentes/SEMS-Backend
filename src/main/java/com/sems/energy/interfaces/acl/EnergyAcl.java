@@ -50,4 +50,14 @@ public interface EnergyAcl {
      * equipo: un equipo dado de alta no ha reportado nada todavia.
      */
     Optional<java.time.Instant> lastReadingOf(UUID deviceId);
+
+    /**
+     * Energia que consumio un equipo en el dia natural de Peru que contiene
+     * {@code instante}.
+     *
+     * <p>La necesitan los umbrales, que se definen en kWh por dia: comparar el
+     * limite con una sola lectura no dice nada, porque un medidor que reporta
+     * cada hora nunca envia una lectura del tamano de un dia entero.
+     */
+    double deviceKwhOnDayOf(UUID deviceId, java.time.Instant instante);
 }

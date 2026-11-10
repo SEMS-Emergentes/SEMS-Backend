@@ -45,6 +45,13 @@ public class EnergyAclImpl implements EnergyAcl {
 
     @Override
     @Transactional(readOnly = true)
+    public double deviceKwhOnDayOf(UUID deviceId, Instant instante) {
+        var desde = instante.atOffset(PERU).toLocalDate().atStartOfDay().toInstant(PERU);
+        return readings.sumKwhByDevice(deviceId.toString(), desde, desde.plus(Duration.ofDays(1)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<DailyUsage> dailyUsage(String userId, int days) {
         List<EnergyMeter> delUsuario = meters.findByUserId(userId);
         if (delUsuario.isEmpty()) {
