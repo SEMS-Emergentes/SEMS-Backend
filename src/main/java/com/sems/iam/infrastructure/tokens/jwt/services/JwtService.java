@@ -10,6 +10,7 @@ import java.security.Key;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -32,8 +33,34 @@ public class JwtService implements TokenService {
     // and never be committed to source control.
     public JwtService(@Value("${security.jwt.secret}") String secret,
                       @Value("${security.jwt.expiration-minutes}") long expirationMinutes) {
+        rechazarSecretoDeEjemplo(secret);
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMinutes = expirationMinutes;
+    }
+
+    /**
+     * Valores de ejemplo publicados en el repositorio: en application.properties
+     * como valor por defecto y en .env.example como plantilla.
+     */
+    static final Set<String> SECRETOS_DE_EJEMPLO = Set.of(
+            "replace_with_minimum_32_chars_secret_key_for_hs256",
+            "cambia_esto_por_un_secreto_de_al_menos_32_caracteres");
+
+    /**
+     * Se niega a arrancar con un secreto que cualquiera puede leer en GitHub.
+     *
+     * <p>Si JWT_SECRET no esta definida, Spring toma el valor por defecto de
+     * application.properties, y el servicio arrancaba igual: firmaba los tokens
+     * con una clave publica, con la que cualquiera puede fabricarse uno con rol
+     * ADMIN. Fallar al arrancar es la unica forma de que ese olvido no pase
+     * desapercibido en un despliegue.
+     */
+    static void rechazarSecretoDeEjemplo(String secret) {
+        if (secret == null || SECRETOS_DE_EJEMPLO.contains(secret.trim())) {
+            throw new IllegalStateException(
+                    "JWT_SECRET is not set or still has the example value; "
+                    + "set it to a private random string of at least 32 characters");
+        }
     }
 
     /**
