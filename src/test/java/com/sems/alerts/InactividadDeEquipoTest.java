@@ -99,6 +99,21 @@ class InactividadDeEquipoTest {
     }
 
     @Test
+    @DisplayName("una regla creada sin el campo active nace encendida y avisa")
+    void sinActiveNaceEncendida() throws Exception {
+        // Con active como boolean primitivo, omitirlo valia false: la regla se
+        // guardaba apagada, nunca avisaba y no hay ruta para encenderla.
+        String horno = equipo("INA-HORNO", "Horno de panaderia");
+        lectura(horno, hace(240));
+        JsonNode creada = cuerpo(ejecutar(201, post("/api/v1/inactivity-rules", """
+                {"user_id":"%s","device_id":"%s","rule_name":"Sin campo active",
+                 "max_inactive_minutes":30}""".formatted(userId, horno))));
+        assertThat(creada.get("active").asBoolean()).isTrue();
+
+        assertThat(paraEquipo(evaluacion.evaluateAll(), horno)).isNotNull();
+    }
+
+    @Test
     @DisplayName("el equipo que nunca reporto no genera aviso")
     void elQueNuncaReportoNoAvisa() throws Exception {
         String reciencomprado = equipo("INA-NUEVO", "Congelador recien instalado");

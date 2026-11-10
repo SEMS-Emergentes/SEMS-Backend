@@ -171,7 +171,7 @@ public class AlertCommandService {
 
     @Transactional
     public InactivityRule createInactivityRule(UUID userId, UUID deviceId, String ruleName,
-                                               int maxInactiveMinutes, boolean active) {
+                                               int maxInactiveMinutes, Boolean active) {
         if (maxInactiveMinutes <= 0) {
             throw AppException.validation("max_inactive_minutes must be greater than zero");
         }
