@@ -201,8 +201,8 @@ public class InsightEngine {
             }
 
             String descripcion = String.format(
-                    "El %s midio %.1f kWh, un %.0f%% por encima de los %.1f kWh que viene "
-                            + "consumiendo de media en los ultimos %d dias.",
+                    "El %s midió %.1f kWh, un %.0f%% por encima de los %.1f kWh que viene "
+                            + "consumiendo de media en los últimos %d días.",
                     ultimo.day(), ultimo.kwh(), desvio, media, anteriores.size());
             String severidad = desvio >= 60 ? "high" : desvio >= 40 ? "medium" : "low";
 
@@ -302,7 +302,7 @@ public class InsightEngine {
         }
         String descripcion = String.format(
                 "%s concentra el %.0f%% del consumo del local (%.0f kWh en el periodo). "
-                        + "Una revision de equipos y horarios en esa zona es donde mas rinde.",
+                        + "Una revisión de equipos y horarios en esa zona es donde más rinde.",
                 zona.name(), parte, mayor.getValue());
         return recommendations.save(Recommendation.create(userId, null, "zone_concentration",
                 titulo, descripcion, redondea(ahorroKwh), ahorro.doubleValue(),
@@ -365,7 +365,7 @@ public class InsightEngine {
                 .multiply(precios.powerPerKwMonth()).setScale(2, RoundingMode.HALF_UP);
         String descripcion = String.format(
                 "El pico medido fue de %.1f kW sobre %.1f kW contratados (%.0f%%). El cargo por "
-                        + "potencia del mes lo fija ese pico, asi que arrancar los equipos "
+                        + "potencia del mes lo fija ese pico, así que arrancar los equipos "
                         + "escalonados rebaja la factura entera.",
                 pico, contratada.doubleValue(), ocupacion * 100);
         return recommendations.save(Recommendation.create(userId, null, "demand_peak", titulo,
